@@ -23,6 +23,7 @@ object Routes {
     @Serializable object Gallery
     @Serializable object Report
     @Serializable object Air
+    @Serializable object Animals
     @Serializable object Household
     @Serializable object Backup
 }

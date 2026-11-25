@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Grass
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.runtime.getValue
@@ -77,6 +78,7 @@ fun SettingsScreen(vm: MainViewModel) {
                 ) { nav.navigate(Routes.Household) }
             }
             item { SettingsHeader("Suivi") }
+            item { SettingsItem("Animaux", "Ordre, modification, suppression", Icons.Rounded.Pets) { nav.navigate(Routes.Animals) } }
             item { SettingsItem("Rapport pour le véto", "PDF sur une période choisie", Icons.Rounded.PictureAsPdf) { nav.navigate(Routes.Report) } }
             item { SettingsItem("Pollens et qualité de l'air", st.city ?: "Choisir une ville", Icons.Rounded.Grass) { nav.navigate(Routes.Air) } }
             item { SettingsHeader("Données") }

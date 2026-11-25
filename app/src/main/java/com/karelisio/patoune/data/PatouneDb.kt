@@ -1,6 +1,7 @@
 package com.karelisio.patoune.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -11,8 +12,9 @@ import androidx.room.RoomDatabase
         MediaItem::class, Observation::class, CareItem::class, VetVisit::class, WeightEntry::class,
         HealthDocument::class, Member::class, SyncEventEntity::class, FieldClock::class, AirDay::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class PatouneDb : RoomDatabase() {
     abstract fun animals(): AnimalDao

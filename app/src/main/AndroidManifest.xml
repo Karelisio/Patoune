@@ -73,6 +73,13 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/patoune_widget" />
         </receiver>
 
+        <receiver android:name=".widget.CrisisWidgetReceiver" android:exported="true" android:label="@string/crisis_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/crisis_widget" />
+        </receiver>
+
         <service
             android:name=".widget.BreathTile"
             android:exported="true"

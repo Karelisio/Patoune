@@ -1,5 +1,6 @@
 package com.karelisio.patoune.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -37,6 +38,8 @@ data class Animal(
     val history: String = "",
     /** Seuil de fréquence respiratoire (resp/min) fixé avec le véto. */
     val breathThreshold: Int? = 30,
+    /** Ordre d'affichage choisi par l'utilisateur. */
+    @ColumnInfo(defaultValue = "0") val sortOrder: Int = 0,
     override val createdBy: String = "",
     override val updatedAt: Long = 0,
     override val deleted: Boolean = false,

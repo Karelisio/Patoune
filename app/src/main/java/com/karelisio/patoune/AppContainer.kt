@@ -74,3 +74,11 @@ class AppContainer(val context: Context) {
         FirebaseMessaging.getInstance().token.await()
     }.getOrNull()
 }
+
+/** Supprime un animal, ses traitements et leurs rappels, puis sélectionne un autre animal. */
+suspend fun AppContainer.deleteAnimal(animal: com.karelisio.patoune.data.Animal) {
+    com.karelisio.patoune.data.AnimalOps.delete(store, db, animal).forEach { reminders.cancel(it.id) }
+    val next = db.animals().allRows().filter { !it.deleted }.minByOrNull { it.sortOrder }
+    settings.selectAnimal(next?.id)
+    hooks.onDataChanged()
+}

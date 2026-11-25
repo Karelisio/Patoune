@@ -69,6 +69,11 @@ android {
         buildConfig = true
     }
 
+    sourceSets {
+        // Schémas Room accessibles aux tests de migration (Robolectric lit les assets de la variante debug).
+        getByName("debug").assets.directories.add("$projectDir/schemas")
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true

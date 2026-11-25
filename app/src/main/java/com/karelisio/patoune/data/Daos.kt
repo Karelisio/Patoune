@@ -14,7 +14,7 @@ interface SyncDao<T : Syncable> {
 
 @Dao
 interface AnimalDao : SyncDao<Animal> {
-    @Query("SELECT * FROM animals WHERE deleted = 0 ORDER BY name") fun observeAll(): Flow<List<Animal>>
+    @Query("SELECT * FROM animals WHERE deleted = 0 ORDER BY sortOrder, name") fun observeAll(): Flow<List<Animal>>
     @Query("SELECT * FROM animals WHERE id = :id") fun observe(id: String): Flow<Animal?>
     @Query("SELECT * FROM animals WHERE id = :id") override suspend fun byId(id: String): Animal?
     @Query("SELECT * FROM animals") override suspend fun allRows(): List<Animal>
