@@ -1,6 +1,5 @@
 package com.karelisio.patoune.ui.screens
 
-import android.app.Activity
 import android.view.HapticFeedbackConstants
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedContent
@@ -114,7 +113,7 @@ fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
     var alert by remember { mutableStateOf(false) }
 
     // Écran allumé ; en mode nuit, luminosité au minimum.
-    val activity = LocalContext.current as? Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     DisposableEffect(night) {
         val w = activity?.window
         w?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
