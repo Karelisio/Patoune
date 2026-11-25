@@ -159,6 +159,19 @@ class Store(
         }
     }
 
+    /**
+     * Met tout l'état actuel dans la file d'envoi (passage solo → partagé, rotation de clé, import).
+     * Les médias locaux seront ré-envoyés chiffrés avec la clé courante.
+     */
+    suspend fun queueSnapshot(): Int {
+        val events = snapshotEvents()
+        db.withTransaction {
+            db.sync().insert(events.map { SyncEventEntity(newId(), it.entity, it.rowId, it.field, it.value.toString(), it.hlc, it.deviceId, pushed = false) })
+            db.media().allRows().filter { it.localPath != null && !it.deleted }.forEach { db.media().put(it.copy(uploaded = false)) }
+        }
+        return events.size
+    }
+
     suspend fun pending(limit: Int = 500): List<SyncEventEntity> = db.sync().unpushed(limit)
     suspend fun markPushed(ids: List<String>) = db.sync().markPushed(ids)
 

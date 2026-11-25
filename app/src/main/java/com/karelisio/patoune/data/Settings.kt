@@ -9,7 +9,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -49,9 +49,14 @@ data class AppSettings(
     val shared: Boolean get() = mode == SyncMode.SHARED && householdId != null
 }
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore("settings")
+private val stores = java.util.concurrent.ConcurrentHashMap<String, DataStore<Preferences>>()
 
-class Settings(private val context: Context) {
+/** Réglages (DataStore). Le nom de fichier est paramétrable pour simuler plusieurs appareils en test. */
+class Settings(context: Context, name: String = "settings") {
+    private val dataStore: DataStore<Preferences> = stores.getOrPut(name) {
+        androidx.datastore.preferences.core.PreferenceDataStoreFactory.create { context.applicationContext.preferencesDataStoreFile(name) }
+    }
+
     private object K {
         val mode = stringPreferencesKey("mode")
         val onboarding = booleanPreferencesKey("onboarding")
@@ -80,7 +85,7 @@ class Settings(private val context: Context) {
         val creatorPublic = stringPreferencesKey("creator_public")
     }
 
-    val flow: Flow<AppSettings> = context.dataStore.data.map { p ->
+    val flow: Flow<AppSettings> = dataStore.data.map { p ->
         AppSettings(
             mode = p[K.mode]?.let { runCatching { SyncMode.valueOf(it) }.getOrNull() } ?: SyncMode.SOLO,
             onboardingDone = p[K.onboarding] ?: false,
@@ -109,24 +114,24 @@ class Settings(private val context: Context) {
     suspend fun deviceId(): String {
         current().deviceId.takeIf { it.isNotEmpty() }?.let { return it }
         val id = UUID.randomUUID().toString().take(8)
-        context.dataStore.edit { it[K.deviceId] = id }
+        dataStore.edit { it[K.deviceId] = id }
         return id
     }
 
-    suspend fun setOnboardingDone() = context.dataStore.edit { it[K.onboarding] = true }
-    suspend fun selectAnimal(id: String?) = context.dataStore.edit { if (id == null) it.remove(K.animal) else it[K.animal] = id }
-    suspend fun setMemberName(name: String) = context.dataStore.edit { it[K.memberName] = name }
-    suspend fun setPush(types: Set<PushType>) = context.dataStore.edit { it[K.push] = types.joinToString(",") { t -> t.name } }
-    suspend fun setUpdateCheck(t: Long) = context.dataStore.edit { it[K.updateCheck] = t }
-    suspend fun setCity(name: String, lat: Double, lon: Double) = context.dataStore.edit { it[K.city] = name; it[K.lat] = lat; it[K.lon] = lon }
-    suspend fun setBreathDuration(s: Int) = context.dataStore.edit { it[K.breathDuration] = s }
-    suspend fun setCursor(c: Long) = context.dataStore.edit { it[K.cursor] = c }
-    suspend fun setLastSync(t: Long) = context.dataStore.edit { it[K.lastSync] = t }
-    suspend fun setQuota(used: Long, max: Long) = context.dataStore.edit { it[K.quotaUsed] = used; it[K.quotaMax] = max }
-    suspend fun setServerUrl(url: String) = context.dataStore.edit { it[K.server] = url }
+    suspend fun setOnboardingDone() = dataStore.edit { it[K.onboarding] = true }
+    suspend fun selectAnimal(id: String?) = dataStore.edit { if (id == null) it.remove(K.animal) else it[K.animal] = id }
+    suspend fun setMemberName(name: String) = dataStore.edit { it[K.memberName] = name }
+    suspend fun setPush(types: Set<PushType>) = dataStore.edit { it[K.push] = types.joinToString(",") { t -> t.name } }
+    suspend fun setUpdateCheck(t: Long) = dataStore.edit { it[K.updateCheck] = t }
+    suspend fun setCity(name: String, lat: Double, lon: Double) = dataStore.edit { it[K.city] = name; it[K.lat] = lat; it[K.lon] = lon }
+    suspend fun setBreathDuration(s: Int) = dataStore.edit { it[K.breathDuration] = s }
+    suspend fun setCursor(c: Long) = dataStore.edit { it[K.cursor] = c }
+    suspend fun setLastSync(t: Long) = dataStore.edit { it[K.lastSync] = t }
+    suspend fun setQuota(used: Long, max: Long) = dataStore.edit { it[K.quotaUsed] = used; it[K.quotaMax] = max }
+    suspend fun setServerUrl(url: String) = dataStore.edit { it[K.server] = url }
 
     suspend fun enterHousehold(householdId: String, memberId: String, serverUrl: String, creator: Boolean, epoch: Int,
-                               tokenEnc: String, keyringEnc: String, creatorPublic: String?) = context.dataStore.edit {
+                               tokenEnc: String, keyringEnc: String, creatorPublic: String?) = dataStore.edit {
         it[K.mode] = SyncMode.SHARED.name
         it[K.household] = householdId
         it[K.memberId] = memberId
@@ -139,19 +144,19 @@ class Settings(private val context: Context) {
         if (creatorPublic != null) it[K.creatorPublic] = creatorPublic
     }
 
-    suspend fun leaveHousehold() = context.dataStore.edit {
+    suspend fun leaveHousehold() = dataStore.edit {
         it[K.mode] = SyncMode.SOLO.name
         listOf(K.household, K.memberId, K.token, K.keyring, K.creatorPublic).forEach { k -> it.remove(k) }
         it.remove(K.creator); it.remove(K.epoch); it.remove(K.cursor); it.remove(K.quotaUsed); it.remove(K.quotaMax)
     }
 
-    suspend fun setKeyring(epoch: Int, keyringEnc: String) = context.dataStore.edit { it[K.epoch] = epoch; it[K.keyring] = keyringEnc }
+    suspend fun setKeyring(epoch: Int, keyringEnc: String) = dataStore.edit { it[K.epoch] = epoch; it[K.keyring] = keyringEnc }
 
-    suspend fun secrets(): StoredSecrets = context.dataStore.data.first().let {
+    suspend fun secrets(): StoredSecrets = dataStore.data.first().let {
         StoredSecrets(it[K.token], it[K.keyring], it[K.ecPrivate], it[K.ecPublic], it[K.creatorPublic])
     }
 
-    suspend fun setDeviceKeys(privateEnc: String, publicB64: String) = context.dataStore.edit { it[K.ecPrivate] = privateEnc; it[K.ecPublic] = publicB64 }
+    suspend fun setDeviceKeys(privateEnc: String, publicB64: String) = dataStore.edit { it[K.ecPrivate] = privateEnc; it[K.ecPublic] = publicB64 }
 }
 
 data class StoredSecrets(val tokenEnc: String?, val keyringEnc: String?, val ecPrivateEnc: String?, val ecPublic: String?, val creatorPublic: String?)

@@ -124,6 +124,7 @@ fun JournalScreen(vm: MainViewModel) {
 @Composable
 private fun CrisisList(animalId: String) {
     val c = LocalContext.current.container
+    val shared = c.sharedFlag
     val nav = LocalNav.current
     val crises by remember(animalId) { c.db.crises().observeFor(animalId) }.collectAsState(emptyList())
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -140,6 +141,7 @@ private fun CrisisList(animalId: String) {
                             style = MaterialTheme.typography.bodyMedium)
                     }
                 }
+                if (shared && cr.createdBy.isNotBlank()) Text("Noté par ${cr.createdBy}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (cr.triggers.isNotBlank()) Text("Déclencheurs : ${cr.triggers.replace(",", ", ")}", style = MaterialTheme.typography.labelLarge)
                 if (media.isNotEmpty()) MediaStrip(media)
             }
@@ -263,7 +265,7 @@ private fun ObservationsContent(animalId: String, snack: SnackbarHostState) {
         items(list.take(100), key = { it.id }) { o ->
             ListItem(
                 headlineContent = { Text("${o.category.label} : ${o.value}") },
-                supportingContent = { Text(Dates.fmtDayTime(o.at) + if (o.note.isNotBlank()) " · ${o.note}" else "") },
+                supportingContent = { Text(Dates.fmtDayTime(o.at) + (if (o.note.isNotBlank()) " · ${o.note}" else "") + if (c.sharedFlag && o.createdBy.isNotBlank()) " · ${o.createdBy}" else "") },
                 trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(o) } }) { Icon(Icons.Rounded.Delete, "Supprimer") } },
             )
         }
