@@ -1,11 +1,18 @@
 package com.karelisio.patoune
 
 import android.app.Application
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.video.VideoFrameDecoder
 import com.karelisio.patoune.reminders.DailyWorker
 import com.karelisio.patoune.reminders.Notif
 import kotlinx.coroutines.launch
 
-class PatouneApp : Application() {
+class PatouneApp : Application(), SingletonImageLoader.Factory {
+    override fun newImageLoader(context: PlatformContext): ImageLoader =
+        ImageLoader.Builder(context).components { add(VideoFrameDecoder.Factory()) }.build()
+
     lateinit var container: AppContainer
         private set
 

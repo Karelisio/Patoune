@@ -34,6 +34,12 @@ import androidx.navigation.compose.rememberNavController
 import com.karelisio.patoune.MainActivity
 import com.karelisio.patoune.data.AppSettings
 import androidx.navigation.toRoute
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.karelisio.patoune.data.AttachType
+import com.karelisio.patoune.media.CameraScreen
+import com.karelisio.patoune.ui.screens.CrisisEditScreen
+import com.karelisio.patoune.ui.screens.JournalScreen
+import com.karelisio.patoune.ui.screens.MediaViewerScreen
 import com.karelisio.patoune.ui.screens.AnimalEditScreen
 import com.karelisio.patoune.ui.screens.BreathCounterScreen
 import com.karelisio.patoune.ui.screens.BreathScreen
@@ -123,6 +129,14 @@ private fun NavGraphBuilder.graph(vm: MainViewModel, settings: AppSettings) {
     composable<Routes.MedicationDetail> { WithAnim(this) { MedicationDetailScreen(vm, it.toRoute<Routes.MedicationDetail>().id) } }
     composable<Routes.Breath> { BreathScreen(vm) }
     composable<Routes.BreathCounter> { BreathCounterScreen(vm, it.toRoute<Routes.BreathCounter>().night) }
-    composable<Routes.Journal> { HomeScreen(vm) }
+    composable<Routes.Journal> { WithAnim(this) { JournalScreen(vm) } }
+    composable<Routes.CrisisEdit> { val r = it.toRoute<Routes.CrisisEdit>(); WithAnim(this) { CrisisEditScreen(vm, r.id, r.startRecording) } }
+    composable<Routes.MediaViewer> { WithAnim(this) { MediaViewerScreen(it.toRoute<Routes.MediaViewer>().id) } }
+    composable<Routes.Camera> {
+        val r = it.toRoute<Routes.Camera>()
+        val nav = LocalNav.current
+        val animal = vm.selected.collectAsStateWithLifecycle().value
+        if (animal != null) CameraScreen(r.video, animal.id, AttachType.valueOf(r.attachType), r.attachId, r.autoStart) { nav.popBackStack() }
+    }
     composable<Routes.Health> { HomeScreen(vm) }
 }

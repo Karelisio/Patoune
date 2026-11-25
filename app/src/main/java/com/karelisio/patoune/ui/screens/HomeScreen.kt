@@ -6,6 +6,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -58,6 +61,7 @@ fun HomeScreen(vm: MainViewModel) {
                 item { Button(onClick = { nav.navigate(Routes.AnimalEdit()) }, Modifier.fillMaxWidth()) { Text("Ajouter un animal") } }
                 return@LazyColumn
             }
+            item { CrisisNowButton { nav.navigate(Routes.CrisisEdit(startRecording = true)) } }
             item { animal?.let { a -> BreathSummaryCard(a, breaths) { nav.navigate(Routes.BreathCounter()) } } }
             if (statuses.isNotEmpty()) item { Text("À donner", style = MaterialTheme.typography.titleMedium) }
             items(statuses, key = { it.med.id }) { s -> DueMedCard(s, shared, onGive = { ctrl.give(s.med) }, onOpen = { nav.navigate(Routes.MedicationDetail(s.med.id)) }) }
@@ -75,3 +79,18 @@ fun DueMedCard(s: MedStatus, shared: Boolean, onGive: () -> Unit, onOpen: () -> 
 }
 
 
+
+/** Bouton « Crise en cours » : un tap lance la vidéo et horodate. */
+@Composable
+fun CrisisNowButton(onClick: () -> Unit) {
+    androidx.compose.material3.Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(72.dp),
+        shape = com.karelisio.patoune.ui.components.PawShapes.pill,
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+    ) {
+        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Videocam, null)
+        androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+        Text("Crise en cours", style = MaterialTheme.typography.titleLarge)
+    }
+}
