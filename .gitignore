@@ -1,0 +1,20 @@
+.gradle/
+build/
+/local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+# Secrets
+app/google-services.json
+google-services.json
+*.jks
+*.keystore
+keystore.properties
+.dev.vars
+.env
+# Worker
+worker/node_modules/
+worker/.wrangler/
+worker/dist/

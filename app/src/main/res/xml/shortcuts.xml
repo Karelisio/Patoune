@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="emergency" android:enabled="true" android:icon="@drawable/ic_paw"
+        android:shortcutShortLabel="@string/shortcut_emergency">
+        <intent android:action="android.intent.action.VIEW" android:data="patoune://emergency"
+            android:targetPackage="com.karelisio.patoune" android:targetClass="com.karelisio.patoune.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="breath" android:enabled="true" android:icon="@drawable/ic_paw"
+        android:shortcutShortLabel="@string/shortcut_breath">
+        <intent android:action="android.intent.action.VIEW" android:data="patoune://breath"
+            android:targetPackage="com.karelisio.patoune" android:targetClass="com.karelisio.patoune.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="crisis" android:enabled="true" android:icon="@drawable/ic_paw"
+        android:shortcutShortLabel="@string/shortcut_crisis">
+        <intent android:action="android.intent.action.VIEW" android:data="patoune://crisis"
+            android:targetPackage="com.karelisio.patoune" android:targetClass="com.karelisio.patoune.MainActivity" />
+    </shortcut>
+</shortcuts>
