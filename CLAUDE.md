@@ -38,7 +38,7 @@ package `com.karelisio.patoune`. Worker Cloudflare dans `/worker`. Tout en fran�
 - Envoi : lots chiffrés `Envelope` = [epoch 2 octets][AES-GCM(gzip(JSON))], AAD `householdId|blob|blobId`.
 - Réception : `/v1/blobs?after=seq`, fusion « dernier écrit gagne par champ » (HLC, puis deviceId), horloges par champ
   dans `field_clocks`. Suppressions = champ `deleted` (tombstone). Idempotent, indépendant de l'ordre → convergence.
-- Médias : chiffrés (AAD `householdId|media|id`) sur R2 ; pushs FCM « data » chiffrés (AAD `householdId|push`).
+- Médias : morceaux de 1 Mio chiffrés (AAD `householdId|media|id|n|total`) sur R2, reprise via `upload-progress/` ; pushs FCM « data » chiffrés (AAD `householdId|push`).
 - Le Worker ne voit que des identifiants aléatoires, des clés publiques, des jetons hachés et des blobs opaques.
   La clé du foyer ne transite que par le QR code (ou le code de secours).
 

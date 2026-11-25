@@ -53,7 +53,7 @@ le partage avec d'autres personnes (conjoint, famille, pet-sitter) est une optio
   de 30 min incluse) ; « si besoin » : 4 h glissantes.
 - **Pushs** : l'émetteur envoie toujours, chaque membre filtre selon ses réglages ; « Prise donnée » annule le rappel.
 - **Pollens** : maximum horaire du jour (grains/m³), barres de fond normalisées à 200 ; AQI européen.
-- **Limites Worker** : 50 Mo par média, quota R2 de 2 Go par foyer (`worker/wrangler.toml`).
+- **Limites Worker** : 200 Mo par média (envoyé par morceaux de 1 Mio chiffrés, avec reprise), quota R2 de 2 Go par foyer (`worker/wrangler.toml`).
 - **Comptage auto** : différence de luminance (grille 24×24 sur la zone) par rapport à la première image, à 10 i/s,
   puis détection de pics ; toujours présenté comme une estimation à valider.
 - **Import de sauvegarde** : fusion (rien n'est effacé), même règle que la sync.

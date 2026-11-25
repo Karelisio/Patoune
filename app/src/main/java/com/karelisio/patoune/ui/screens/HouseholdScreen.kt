@@ -182,7 +182,7 @@ fun HouseholdScreen(vm: MainViewModel) {
                     SectionCard {
                         Text("Stockage des médias", style = MaterialTheme.typography.titleMedium)
                         val max = s.quotaMax.takeIf { it > 0 }
-                        Text(if (max != null) "${mb(s.quotaUsed)} utilisés sur ${mb(max)} (50 Mo max par média)" else "Quota inconnu (synchronisez)")
+                        Text(if (max != null) "${mb(s.quotaUsed)} utilisés sur ${mb(max)} (200 Mo max par média)" else "Quota inconnu (synchronisez)")
                         if (max != null) LinearProgressIndicator(progress = { (s.quotaUsed.toFloat() / max).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                     }
                 }

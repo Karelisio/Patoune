@@ -99,8 +99,11 @@ class Settings(context: Context, name: String = "settings") {
             isCreator = p[K.creator] ?: false,
             keyEpoch = p[K.epoch] ?: 0,
             syncCursor = p[K.cursor] ?: 0,
-            pushEnabled = p[K.push]?.split(",")?.mapNotNull { runCatching { PushType.valueOf(it) }.getOrNull() }?.toSet()
-                ?: PushType.entries.toSet(),
+            pushEnabled = p[K.push]?.split(",")?.let { parts ->
+                val set = parts.mapNotNull { runCatching { PushType.valueOf(it) }.getOrNull() }.toSet()
+                // Préférences enregistrées avant l'ajout de « Prise en retard » : activé par défaut.
+                if ("v2" in parts) set else set + PushType.LATE
+            } ?: PushType.entries.toSet(),
             lastUpdateCheck = p[K.updateCheck] ?: 0,
             city = p[K.city], cityLat = p[K.lat], cityLon = p[K.lon],
             breathDuration = p[K.breathDuration] ?: 30,
@@ -122,7 +125,7 @@ class Settings(context: Context, name: String = "settings") {
     suspend fun setOnboardingDone() = dataStore.edit { it[K.onboarding] = true }
     suspend fun selectAnimal(id: String?) = dataStore.edit { if (id == null) it.remove(K.animal) else it[K.animal] = id }
     suspend fun setMemberName(name: String) = dataStore.edit { it[K.memberName] = name }
-    suspend fun setPush(types: Set<PushType>) = dataStore.edit { it[K.push] = types.joinToString(",") { t -> t.name } }
+    suspend fun setPush(types: Set<PushType>) = dataStore.edit { it[K.push] = (types.map { t -> t.name } + "v2").joinToString(",") }
     suspend fun setUpdateCheck(t: Long) = dataStore.edit { it[K.updateCheck] = t }
     suspend fun setCity(name: String, lat: Double, lon: Double) = dataStore.edit { it[K.city] = name; it[K.lat] = lat; it[K.lon] = lon }
     suspend fun setBreathDuration(s: Int) = dataStore.edit { it[K.breathDuration] = s }

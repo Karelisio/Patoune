@@ -29,7 +29,15 @@ class ReminderScheduler(private val context: Context) {
 
     suspend fun rescheduleAll() {
         val meds = context.container.db.medications().active()
-        meds.forEach { schedule(it) }
+        val now = System.currentTimeMillis()
+        meds.forEach { med ->
+            schedule(med)
+            // Après un redémarrage : ré-armer la vérif retard de l'horaire qui vient de passer.
+            if (!med.asNeeded && med.lateMinutes > 0) {
+                ReminderPlanner.next(ReminderPlanner.parseTimes(med.times), now - med.lateMinutes * 60_000L, Dates.zone(), Dates.parse(med.startDate), Dates.parse(med.endDate))
+                    ?.takeIf { it <= now }?.let { scheduleLate(med, it, now) }
+            }
+        }
     }
 
     fun schedule(med: Medication, after: Long = System.currentTimeMillis()) {
