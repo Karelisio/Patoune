@@ -52,7 +52,10 @@ open class Hooks(private val c: AppContainer) {
         if ("medication" in entities) c.reminders.rescheduleAll()
         for (id in medIds) {
             val med = c.db.medications().byId(id) ?: continue
-            if (c.doses.alreadyGiven(med) != null) com.karelisio.patoune.reminders.Notif.cancel(c.context, com.karelisio.patoune.reminders.ReminderScheduler.notifId(id))
+            if (c.doses.alreadyGiven(med) != null) {
+                com.karelisio.patoune.reminders.Notif.cancel(c.context, com.karelisio.patoune.reminders.ReminderScheduler.notifId(id))
+                com.karelisio.patoune.reminders.Notif.cancel(c.context, com.karelisio.patoune.reminders.ReminderScheduler.latePushNotifId(id))
+            }
         }
         c.widgets.refresh()
     }

@@ -47,6 +47,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,7 +65,9 @@ import com.karelisio.patoune.data.DoseLog
 import com.karelisio.patoune.data.DoseStatus
 import com.karelisio.patoune.data.MedType
 import com.karelisio.patoune.data.Medication
+import com.karelisio.patoune.data.MedicationChange
 import com.karelisio.patoune.domain.Dates
+import com.karelisio.patoune.domain.MedDiff
 import com.karelisio.patoune.domain.ReminderPlanner
 import com.karelisio.patoune.domain.Stock
 import com.karelisio.patoune.domain.TakenDose
@@ -72,6 +76,10 @@ import com.karelisio.patoune.ui.LocalNav
 import com.karelisio.patoune.ui.MainViewModel
 import com.karelisio.patoune.ui.Routes
 import com.karelisio.patoune.ui.components.AnimalTopBar
+import com.karelisio.patoune.ui.components.AppPermission
+import com.karelisio.patoune.ui.components.Perms
+import com.karelisio.patoune.ui.components.rememberPermissionRequester
+import com.karelisio.patoune.ui.components.rememberResumeTick
 import com.karelisio.patoune.ui.components.ChoiceChips
 import com.karelisio.patoune.ui.components.DateField
 import com.karelisio.patoune.ui.components.DoneButton
@@ -82,6 +90,7 @@ import com.karelisio.patoune.ui.components.PawShapes
 import com.karelisio.patoune.ui.components.SectionCard
 import com.karelisio.patoune.ui.components.ShapeBadge
 import com.karelisio.patoune.ui.components.TimesEditor
+import com.karelisio.patoune.ui.components.VetNote
 import com.karelisio.patoune.ui.components.cascade
 import com.karelisio.patoune.ui.sharedKey
 import kotlinx.coroutines.flow.flowOf
@@ -195,7 +204,9 @@ fun MedicationEditScreen(vm: MainViewModel, id: String?) {
     val animal by vm.selected.collectAsStateWithLifecycle()
     var m by remember { mutableStateOf(Medication(startDate = Dates.today().toString())) }
     var trackStock by remember { mutableStateOf(false) }
-    LaunchedEffect(id) { if (id != null) c.db.medications().byId(id)?.let { m = it; trackStock = it.stockRemaining != null } }
+    /** Version enregistrée avant modification, pour l'historique du traitement. */
+    var original by remember { mutableStateOf<Medication?>(null) }
+    LaunchedEffect(id) { if (id != null) c.db.medications().byId(id)?.let { m = it; original = it; trackStock = it.stockRemaining != null } }
 
     Scaffold(topBar = { BackTopBar(if (id == null) "Nouveau traitement" else "Modifier") }) { pad ->
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(16.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -209,6 +220,16 @@ fun MedicationEditScreen(vm: MainViewModel, id: String?) {
             if (!m.asNeeded) {
                 Text("Horaires", style = MaterialTheme.typography.titleMedium)
                 TimesEditor(m.times) { m = m.copy(times = it) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Rappel type réveil (plein écran, plus fiable)", Modifier.weight(1f))
+                    Switch(m.alarmStyle, { m = m.copy(alarmStyle = it) })
+                }
+                if (m.alarmStyle) FullScreenPermissionHint()
+                // Clé : le champ se réinitialise une fois le traitement existant chargé.
+                key(original?.id) {
+                    NumberField(m.lateMinutes.toDouble(), { m = m.copy(lateMinutes = it?.toInt()?.coerceIn(0, 24 * 60) ?: 0) }, "Relancer si non donné après (min)")
+                }
+                VetNote("0 = jamais. En mode partagé, les autres membres sont aussi prévenus.")
             }
             DateField(m.startDate, { m = m.copy(startDate = it ?: Dates.today().toString()) }, "Début", clearable = false)
             DateField(m.endDate, { m = m.copy(endDate = it) }, "Fin (facultatif)")
@@ -231,6 +252,10 @@ fun MedicationEditScreen(vm: MainViewModel, id: String?) {
                         val aid = m.animalId.ifEmpty { animal?.id ?: return@launch }
                         val saved = c.store.save(m.copy(animalId = aid, name = m.name.ifBlank { m.type.label },
                             stockRemaining = if (trackStock) m.stockRemaining ?: 0.0 else null, stockAlertAt = if (trackStock) m.stockAlertAt else null))
+                        val changes = MedDiff.diff(original, saved)
+                        if (changes.isNotEmpty()) {
+                            c.store.save(MedicationChange(medicationId = saved.id, animalId = saved.animalId, at = System.currentTimeMillis(), summary = changes.joinToString("\n")))
+                        }
                         c.reminders.schedule(saved)
                         nav.popBackStack()
                     }
@@ -249,6 +274,7 @@ fun MedicationDetailScreen(vm: MainViewModel, id: String) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val med by remember { c.db.medications().observe(id) }.collectAsState(null)
     val logs by remember { c.db.doses().observeFor(id) }.collectAsState(emptyList())
+    val changes by remember { c.db.medicationChanges().observeFor(id) }.collectAsState(emptyList())
     var status by remember { mutableStateOf<MedStatus?>(null) }
     var refill by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -278,6 +304,10 @@ fun MedicationDetailScreen(vm: MainViewModel, id: String) {
                 }
             }
             if (m.notes.isNotBlank()) item { SectionCard { Text(m.notes) } }
+            if (changes.isNotEmpty()) {
+                item { Text("Historique du traitement", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
+                items(changes, key = { it.id }) { ch -> ChangeRow(ch, shared) }
+            }
             item { Text("Historique des prises", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
             items(logs, key = { it.id }) { log -> DoseRow(log, shared) { scope.launch { c.doses.undo(log) } } }
         }
@@ -298,6 +328,27 @@ fun MedicationDetailScreen(vm: MainViewModel, id: String) {
         title = { Text("Supprimer ${m.name} ?") },
         confirmButton = { TextButton(onClick = { scope.launch { c.reminders.cancel(m.id); c.store.delete(m); nav.popBackStack() } }) { Text("Supprimer") } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annuler") } },
+    )
+}
+
+/** Rappel discret si l'autorisation « Rappels plein écran » manque (Android 14+). */
+@Composable
+private fun FullScreenPermissionHint() {
+    val ctx = LocalContext.current
+    val tick = rememberResumeTick()
+    var refresh by remember { mutableIntStateOf(0) }
+    val granted = remember(tick, refresh) { Perms.granted(ctx, AppPermission.FULL_SCREEN) }
+    val request = rememberPermissionRequester { refresh++ }
+    if (!granted) TextButton(onClick = { request(AppPermission.FULL_SCREEN) }) { Text("Autoriser les rappels plein écran") }
+}
+
+@Composable
+private fun ChangeRow(change: MedicationChange, shared: Boolean) {
+    ListItem(
+        headlineContent = { Text(change.summary) },
+        supportingContent = {
+            Text(Dates.fmtDayTime(change.at) + if (shared && change.createdBy.isNotBlank()) " · ${change.createdBy}" else "")
+        },
     )
 }
 

@@ -7,6 +7,8 @@ import com.karelisio.patoune.data.Medication
 import com.karelisio.patoune.data.PushType
 import com.karelisio.patoune.domain.Dates
 import com.karelisio.patoune.domain.DoseGuard
+import com.karelisio.patoune.domain.HandledDose
+import com.karelisio.patoune.domain.LateCheck
 import com.karelisio.patoune.domain.ReminderPlanner
 import com.karelisio.patoune.domain.Stock
 import com.karelisio.patoune.domain.TakenDose
@@ -26,6 +28,14 @@ class Doses(private val c: AppContainer) {
         return DoseGuard.alreadyGiven(logs.map { TakenDose(it.takenAt, it.createdBy) }, window)
     }
 
+    /** Vérification de retard : aucune prise donnée ou sautée ne couvre l'horaire [scheduledAt]. */
+    suspend fun isLate(med: Medication, scheduledAt: Long, now: Long = System.currentTimeMillis()): Boolean {
+        val times = ReminderPlanner.parseTimes(med.times)
+        val from = DoseGuard.currentWindow(times, scheduledAt, Dates.zone()).first
+        val handled = c.db.doses().since(med.id, minOf(from, scheduledAt)).map { HandledDose(it.takenAt, it.scheduledAt) }
+        return LateCheck.shouldAlert(times, Dates.zone(), med.lateMinutes, active = !med.deleted && !med.asNeeded, scheduledAt, handled, now)
+    }
+
     suspend fun give(med: Medication, status: DoseStatus, scheduledAt: Long? = null, force: Boolean = false): DoseResult {
         if (status == DoseStatus.GIVEN && !force) alreadyGiven(med)?.let { return DoseResult.AlreadyGiven(it.takenAt, it.by) }
         val log = c.store.save(DoseLog(medicationId = med.id, animalId = med.animalId, scheduledAt = scheduledAt, takenAt = System.currentTimeMillis(), status = status))
@@ -34,6 +44,9 @@ class Doses(private val c: AppContainer) {
             checkStock(updated)
         }
         Notif.cancel(c.context, ReminderScheduler.notifId(med.id))
+        // Prise donnée ou sautée : plus de relance « En retard » pour cet horaire.
+        c.reminders.cancelLate(med.id)
+        Notif.cancel(c.context, ReminderScheduler.latePushNotifId(med.id))
         c.hooks.onDose(med, log)
         return DoseResult.Saved(log)
     }

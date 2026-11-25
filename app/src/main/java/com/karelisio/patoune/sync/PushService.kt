@@ -18,9 +18,16 @@ class PushService : FirebaseMessagingService() {
             val p = c.household.openPush(hid, data) ?: return@runBlocking
             val type = runCatching { PushType.valueOf(p.t) }.getOrNull() ?: return@runBlocking
             // « Prise donnée » : le rappel s'annule ici aussi.
-            if (type == PushType.DOSE && p.ref != null) Notif.cancel(applicationContext, ReminderScheduler.notifId(p.ref))
+            if (type == PushType.DOSE && p.ref != null) {
+                Notif.cancel(applicationContext, ReminderScheduler.notifId(p.ref))
+                Notif.cancel(applicationContext, ReminderScheduler.latePushNotifId(p.ref))
+            }
             if (type in c.settings.current().pushEnabled) {
-                val channel = if (type == PushType.BREATH) Notif.CH_ALERTS else Notif.CH_HOUSEHOLD
+                val channel = when (type) {
+                    PushType.BREATH -> Notif.CH_ALERTS
+                    PushType.LATE -> Notif.CH_REMINDERS
+                    else -> Notif.CH_HOUSEHOLD
+                }
                 val by = p.from.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""
                 Notif.simple(applicationContext, channel, (p.t + (p.ref ?: "")).hashCode(), p.title, p.body + by)
             }

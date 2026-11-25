@@ -33,6 +33,15 @@ interface MedicationDao : SyncDao<Medication> {
 }
 
 @Dao
+interface MedicationChangeDao : SyncDao<MedicationChange> {
+    @Query("SELECT * FROM medication_changes WHERE medicationId = :medId AND deleted = 0 ORDER BY at DESC") fun observeFor(medId: String): Flow<List<MedicationChange>>
+    @Query("SELECT * FROM medication_changes WHERE animalId = :animalId AND deleted = 0 AND at BETWEEN :from AND :to ORDER BY at") suspend fun between(animalId: String, from: Long, to: Long): List<MedicationChange>
+    @Query("SELECT * FROM medication_changes WHERE id = :id") override suspend fun byId(id: String): MedicationChange?
+    @Query("SELECT * FROM medication_changes") override suspend fun allRows(): List<MedicationChange>
+    @Upsert override suspend fun put(row: MedicationChange)
+}
+
+@Dao
 interface DoseLogDao : SyncDao<DoseLog> {
     @Query("SELECT * FROM dose_logs WHERE medicationId = :medId AND deleted = 0 ORDER BY takenAt DESC") fun observeFor(medId: String): Flow<List<DoseLog>>
     @Query("SELECT * FROM dose_logs WHERE animalId = :animalId AND deleted = 0 AND takenAt BETWEEN :from AND :to ORDER BY takenAt") suspend fun between(animalId: String, from: Long, to: Long): List<DoseLog>

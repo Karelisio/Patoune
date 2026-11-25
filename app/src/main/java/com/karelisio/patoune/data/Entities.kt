@@ -71,6 +71,25 @@ data class Medication(
     val stockAlertAt: Double? = null,
     val renewalDate: String? = null,
     val asNeeded: Boolean = false,
+    /** Rappel type réveil : alarme système et notification plein écran. */
+    @ColumnInfo(defaultValue = "0") val alarmStyle: Boolean = false,
+    /** Relance « En retard » si la prise n'est pas marquée après ce délai (0 = jamais). */
+    @ColumnInfo(defaultValue = "30") val lateMinutes: Int = 30,
+    override val createdBy: String = "",
+    override val updatedAt: Long = 0,
+    override val deleted: Boolean = false,
+) : Syncable
+
+/** Changement notable d'un traitement (dose, horaires, dates…), pour l'historique et le rapport véto. */
+@Serializable
+@Entity(tableName = "medication_changes", indices = [Index("medicationId"), Index("animalId")])
+data class MedicationChange(
+    @PrimaryKey override val id: String = "",
+    val medicationId: String = "",
+    val animalId: String = "",
+    val at: Long = 0,
+    /** Lignes lisibles séparées par des retours à la ligne. */
+    val summary: String = "",
     override val createdBy: String = "",
     override val updatedAt: Long = 0,
     override val deleted: Boolean = false,
