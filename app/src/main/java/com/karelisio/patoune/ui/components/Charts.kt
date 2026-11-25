@@ -1,5 +1,11 @@
 package com.karelisio.patoune.ui.components
 
+import com.karelisio.patoune.ui.fmtQty
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -32,7 +38,7 @@ data class ChartBand(val x: Long, val widthMs: Long, val level: Float)
 
 /**
  * Courbe qui se dessine à l'apparition : points mesurés, moyenne mobile, seuil en pointillé,
- * repères de crises et bandes de pollens en fond.
+ * repères de crises et bandes de pollens en fond. TalkBack lit un résumé ([description] ou résumé par défaut).
  */
 @Composable
 fun TrendChart(
@@ -45,14 +51,24 @@ fun TrendChart(
     height: Dp = 200.dp,
     unit: String = "",
     color: Color = MaterialTheme.colorScheme.primary,
+    description: String? = null,
 ) {
+    val summary = description ?: if (points.isEmpty()) stringResource(R.string.a11y_chart_empty) else {
+        val over = threshold?.let { t -> points.count { it.y > t } } ?: 0
+        pluralStringResource(
+            R.plurals.a11y_chart_summary, points.size, points.size,
+            fmtQty(points.minOf { it.y }), fmtQty(points.maxOf { it.y }), fmtQty(points.last().y), unit,
+        ) + if (threshold != null) " " + pluralStringResource(R.plurals.a11y_chart_over, over, over, fmtQty(threshold)) else ""
+
+    }
     val reduce = rememberReduceMotion()
     val progress = remember(points.size, points.firstOrNull()?.x) { Animatable(if (reduce) 1f else 0f) }
     LaunchedEffect(progress) { progress.animateTo(1f, tween(900)) }
     val colors = MaterialTheme.colorScheme
     val measurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 10.sp, color = colors.onSurfaceVariant)
-    Canvas(modifier.fillMaxWidth().height(height)) {
+    Canvas(modifier.fillMaxWidth().height(height).clearAndSetSemantics { contentDescription = summary }) {
+
         if (points.isEmpty()) return@Canvas
         val minX = minOf(points.minOf { it.x }, bands.minOfOrNull { it.x } ?: Long.MAX_VALUE)
         val maxX = maxOf(points.maxOf { it.x }, (bands.maxOfOrNull { it.x + it.widthMs } ?: 0L)).let { if (it == minX) minX + 1 else it }

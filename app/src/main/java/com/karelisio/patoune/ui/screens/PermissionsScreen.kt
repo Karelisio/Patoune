@@ -1,5 +1,7 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -33,19 +35,20 @@ fun PermissionsScreen() {
     val tick = rememberResumeTick()
     var refresh by remember { mutableIntStateOf(0) }
     val request = rememberPermissionRequester { refresh++ }
-    Scaffold(topBar = { BackTopBar("Autorisations") }) { pad ->
+    Scaffold(topBar = { BackTopBar(stringResource(R.string.permissions_title)) }) { pad ->
         LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(AppPermission.entries) { p ->
                 val ok = remember(tick, refresh) { Perms.granted(ctx, p) }
                 SectionCard {
                     androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Icon(p.icon, null)
-                        Text(p.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 12.dp).weight(1f))
-                        if (ok) Icon(Icons.Rounded.CheckCircle, "Accordée", tint = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(p.titleRes), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 12.dp).weight(1f))
+                        if (ok) Icon(Icons.Rounded.CheckCircle, stringResource(R.string.perm_granted), tint = MaterialTheme.colorScheme.primary)
                     }
-                    Text(p.why, style = MaterialTheme.typography.bodyMedium)
-                    if (!ok) FilledTonalButton(onClick = { request(p) }) { Text("Autoriser") }
-                    else androidx.compose.material3.TextButton(onClick = { Perms.settingsIntent(ctx, p)?.let { runCatching { ctx.startActivity(it) } } }) { Text("Ouvrir les réglages") }
+                    Text(stringResource(p.whyRes), style = MaterialTheme.typography.bodyMedium)
+                    if (!ok) FilledTonalButton(onClick = { request(p) }) { Text(stringResource(R.string.perm_allow)) }
+                    else androidx.compose.material3.TextButton(onClick = { Perms.settingsIntent(ctx, p)?.let { runCatching { ctx.startActivity(it) } } }) { Text(stringResource(R.string.perm_open_settings)) }
+
                 }
             }
         }

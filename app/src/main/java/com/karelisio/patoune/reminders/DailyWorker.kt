@@ -1,5 +1,6 @@
 package com.karelisio.patoune.reminders
 
+import com.karelisio.patoune.R
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -20,8 +21,9 @@ class DailyWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         for (med in c.db.medications().active()) {
             val days = Stock.daysLeft(med.stockRemaining, med.unitsPerDose, ReminderPlanner.parseTimes(med.times).size)
             if (Stock.renewalDue(Dates.parse(med.renewalDate), today, days)) {
-                Notif.simple(applicationContext, Notif.CH_STOCK, ("renew" + med.id).hashCode(), "Ordonnance : ${med.name}",
-                    days?.let { "Environ $it jour(s) de traitement restant(s). Pensez à renouveler l'ordonnance." } ?: "Date de renouvellement proche.")
+                val ctx = applicationContext
+                Notif.simple(ctx, Notif.CH_STOCK, ("renew" + med.id).hashCode(), ctx.getString(R.string.notif_renew_title, med.name),
+                    days?.let { ctx.resources.getQuantityString(R.plurals.notif_renew_days, it, it) } ?: ctx.getString(R.string.notif_renew_soon))
             }
         }
         for (ci in c.db.care().withDue()) {
@@ -29,14 +31,17 @@ class DailyWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             val days = java.time.temporal.ChronoUnit.DAYS.between(today, due)
             if (days in 0..7 && (days == 7L || days <= 1L)) {
                 val animal = c.db.animals().byId(ci.animalId)?.name ?: ""
-                Notif.simple(applicationContext, Notif.CH_STOCK, ("care" + ci.id).hashCode(), "Rappel ${ci.kind.label.lowercase()} : $animal",
-                    "${ci.name} prévu le ${Dates.fmtDay(ci.nextDue)}.")
+                val ctx = applicationContext
+                Notif.simple(ctx, Notif.CH_STOCK, ("care" + ci.id).hashCode(), ctx.getString(R.string.notif_care_title, ctx.getString(ci.kind.labelRes), animal),
+                    ctx.getString(R.string.notif_care_body, ci.name, Dates.fmtDay(ci.nextDue)))
             }
         }
         for (v in c.db.visits().allRows().filter { !it.deleted && it.nextVisit != null }) {
             val due = Dates.parse(v.nextVisit) ?: continue
             if (java.time.temporal.ChronoUnit.DAYS.between(today, due) == 1L) {
-                Notif.simple(applicationContext, Notif.CH_STOCK, ("visit" + v.id).hashCode(), "Visite véto demain", v.reason.ifBlank { "Prochaine visite" })
+                Notif.simple(applicationContext, Notif.CH_STOCK, ("visit" + v.id).hashCode(), applicationContext.getString(R.string.notif_visit_tomorrow),
+                    v.reason.ifBlank { applicationContext.getString(R.string.health_next_visit) })
+
             }
         }
         c.hooks.onDaily()

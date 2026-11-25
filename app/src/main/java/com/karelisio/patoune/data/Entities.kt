@@ -1,5 +1,8 @@
 package com.karelisio.patoune.data
 
+import com.karelisio.patoune.R
+import androidx.annotation.StringRes
+import androidx.annotation.PluralsRes
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
@@ -45,12 +48,14 @@ data class Animal(
     override val deleted: Boolean = false,
 ) : Syncable
 
-enum class MedType(val label: String, val unit: String) {
-    INHALER("Inhalateur avec chambre", "bouffée"),
-    TABLET("Comprimé", "comprimé"),
-    LIQUID("Liquide", "mL"),
-    OTHER("Autre", "dose"),
+/** Les noms d'enum sont stockés et synchronisés : ne jamais les renommer (libellés traduits via les ressources). */
+enum class MedType(@StringRes val labelRes: Int, @PluralsRes val unitRes: Int, @StringRes val unitsNameRes: Int) {
+    INHALER(R.string.med_type_inhaler, R.plurals.unit_inhaler, R.string.units_inhaler),
+    TABLET(R.string.med_type_tablet, R.plurals.unit_tablet, R.string.units_tablet),
+    LIQUID(R.string.med_type_liquid, R.plurals.unit_liquid, R.string.units_liquid),
+    OTHER(R.string.med_type_other, R.plurals.unit_other, R.string.units_other),
 }
+
 
 @Serializable
 @Entity(tableName = "medications", indices = [Index("animalId")])
@@ -71,6 +76,25 @@ data class Medication(
     val stockAlertAt: Double? = null,
     val renewalDate: String? = null,
     val asNeeded: Boolean = false,
+    /** Rappel type réveil : alarme système et notification plein écran. */
+    @ColumnInfo(defaultValue = "0") val alarmStyle: Boolean = false,
+    /** Relance « En retard » si la prise n'est pas marquée après ce délai (0 = jamais). */
+    @ColumnInfo(defaultValue = "30") val lateMinutes: Int = 30,
+    override val createdBy: String = "",
+    override val updatedAt: Long = 0,
+    override val deleted: Boolean = false,
+) : Syncable
+
+/** Changement notable d'un traitement (dose, horaires, dates…), pour l'historique et le rapport véto. */
+@Serializable
+@Entity(tableName = "medication_changes", indices = [Index("medicationId"), Index("animalId")])
+data class MedicationChange(
+    @PrimaryKey override val id: String = "",
+    val medicationId: String = "",
+    val animalId: String = "",
+    val at: Long = 0,
+    /** Lignes lisibles séparées par des retours à la ligne. */
+    val summary: String = "",
     override val createdBy: String = "",
     override val updatedAt: Long = 0,
     override val deleted: Boolean = false,
@@ -92,7 +116,9 @@ data class DoseLog(
     override val deleted: Boolean = false,
 ) : Syncable
 
-enum class BreathContext(val label: String) { SLEEP("Sommeil"), REST("Repos"), OTHER("Autre") }
+enum class BreathContext(@StringRes val labelRes: Int) {
+    SLEEP(R.string.breath_ctx_sleep), REST(R.string.breath_ctx_rest), OTHER(R.string.breath_ctx_other)
+}
 
 @Serializable
 @Entity(tableName = "breath_counts", indices = [Index("animalId")])
@@ -130,15 +156,36 @@ data class Crisis(
     override val deleted: Boolean = false,
 ) : Syncable
 
+/**
+ * Types et déclencheurs de crise : ces chaînes françaises sont les valeurs stockées et synchronisées
+ * (clés stables, ne pas modifier). Seul l'affichage est traduit, via [labels].
+ */
 object CrisisTypes {
     val all = listOf("Toux", "Respiration bouche ouverte", "Sifflement", "Respiration abdominale", "Haut-le-cœur", "Autre")
     val triggers = listOf("Litière", "Parfum", "Ménage", "Fumée", "Pollens", "Saison", "Stress")
+
+    /** Clé stockée → libellé traduit. Une clé inconnue (ancienne donnée, saisie libre) s'affiche telle quelle. */
+    val labels: Map<String, Int> = mapOf(
+        "Toux" to R.string.crisis_type_cough,
+        "Respiration bouche ouverte" to R.string.crisis_type_open_mouth,
+        "Sifflement" to R.string.crisis_type_wheeze,
+        "Respiration abdominale" to R.string.crisis_type_abdominal,
+        "Haut-le-cœur" to R.string.crisis_type_retch,
+        "Autre" to R.string.crisis_type_other,
+        "Litière" to R.string.trigger_litter,
+        "Parfum" to R.string.trigger_perfume,
+        "Ménage" to R.string.trigger_cleaning,
+        "Fumée" to R.string.trigger_smoke,
+        "Pollens" to R.string.trigger_pollen,
+        "Saison" to R.string.trigger_season,
+        "Stress" to R.string.trigger_stress,
+    )
 }
 
 enum class MediaKind { PHOTO, VIDEO, PDF }
-enum class AttachType(val label: String) {
-    NONE("Libre"), ANIMAL("Profil"), CRISIS("Crise"), BREATH("Comptage"), VISIT("Visite"),
-    OBSERVATION("Observation"), DOCUMENT("Document")
+enum class AttachType(@StringRes val labelRes: Int) {
+    NONE(R.string.attach_none), ANIMAL(R.string.attach_animal), CRISIS(R.string.attach_crisis), BREATH(R.string.attach_breath),
+    VISIT(R.string.attach_visit), OBSERVATION(R.string.attach_observation), DOCUMENT(R.string.attach_document)
 }
 
 @Serializable
@@ -162,12 +209,41 @@ data class MediaItem(
     override val deleted: Boolean = false,
 ) : Syncable
 
-enum class ObsCategory(val label: String, val options: List<String>) {
-    APPETITE("Appétit", listOf("Normal", "Diminué", "Absent", "Augmenté")),
-    WATER("Eau", listOf("Normale", "Peu", "Beaucoup")),
-    LITTER("Litière", listOf("Normale", "Diarrhée", "Constipation", "Urine ++", "Rien")),
-    VOMIT("Vomissement", listOf("Aucun", "Boule de poils", "Nourriture", "Bile")),
-    BEHAVIOR("Comportement", listOf("Normal", "Calme", "Abattu", "Agité", "Se cache")),
+/**
+ * [options] : valeurs françaises stockées telles quelles et synchronisées (clés stables, ne pas modifier) ;
+ * l'affichage passe par [optionLabels].
+ */
+enum class ObsCategory(@StringRes val labelRes: Int, val options: List<String>) {
+    APPETITE(R.string.obs_appetite, listOf("Normal", "Diminué", "Absent", "Augmenté")),
+    WATER(R.string.obs_water, listOf("Normale", "Peu", "Beaucoup")),
+    LITTER(R.string.obs_litter, listOf("Normale", "Diarrhée", "Constipation", "Urine ++", "Rien")),
+    VOMIT(R.string.obs_vomit, listOf("Aucun", "Boule de poils", "Nourriture", "Bile")),
+    BEHAVIOR(R.string.obs_behavior, listOf("Normal", "Calme", "Abattu", "Agité", "Se cache"));
+
+    companion object {
+        /** Valeur stockée → libellé traduit ; repli sur la valeur brute si inconnue. */
+        val optionLabels: Map<String, Int> = mapOf(
+            "Normal" to R.string.obs_opt_normal,
+            "Normale" to R.string.obs_opt_normal_f,
+            "Diminué" to R.string.obs_opt_decreased,
+            "Absent" to R.string.obs_opt_absent,
+            "Augmenté" to R.string.obs_opt_increased,
+            "Peu" to R.string.obs_opt_little,
+            "Beaucoup" to R.string.obs_opt_a_lot,
+            "Diarrhée" to R.string.obs_opt_diarrhea,
+            "Constipation" to R.string.obs_opt_constipation,
+            "Urine ++" to R.string.obs_opt_urine,
+            "Rien" to R.string.obs_opt_nothing,
+            "Aucun" to R.string.obs_opt_none,
+            "Boule de poils" to R.string.obs_opt_hairball,
+            "Nourriture" to R.string.obs_opt_food,
+            "Bile" to R.string.obs_opt_bile,
+            "Calme" to R.string.obs_opt_calm,
+            "Abattu" to R.string.obs_opt_lethargic,
+            "Agité" to R.string.obs_opt_restless,
+            "Se cache" to R.string.obs_opt_hiding,
+        )
+    }
 }
 
 @Serializable
@@ -184,7 +260,7 @@ data class Observation(
     override val deleted: Boolean = false,
 ) : Syncable
 
-enum class CareKind(val label: String) { VACCINE("Vaccin"), DEWORM("Vermifuge"), FLEA("Antipuces") }
+enum class CareKind(@StringRes val labelRes: Int) { VACCINE(R.string.care_vaccine), DEWORM(R.string.care_deworm), FLEA(R.string.care_flea) }
 
 @Serializable
 @Entity(tableName = "care_items", indices = [Index("animalId")])
@@ -227,7 +303,8 @@ data class WeightEntry(
     override val deleted: Boolean = false,
 ) : Syncable
 
-enum class DocKind(val label: String) { PRESCRIPTION("Ordonnance"), ANALYSIS("Analyse"), OTHER("Autre") }
+enum class DocKind(@StringRes val labelRes: Int) { PRESCRIPTION(R.string.doc_prescription), ANALYSIS(R.string.doc_analysis), OTHER(R.string.doc_other) }
+
 
 @Serializable
 @Entity(tableName = "documents", indices = [Index("animalId")])

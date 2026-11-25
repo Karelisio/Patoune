@@ -1,5 +1,7 @@
 package com.karelisio.patoune.ui.components
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,8 +62,8 @@ fun DateField(value: String?, onChange: (String?) -> Unit, label: String, modifi
         value = Dates.parse(value)?.format(Dates.day) ?: "",
         onValueChange = {}, readOnly = true, label = { Text(label) },
         trailingIcon = {
-            if (clearable && !value.isNullOrBlank()) IconButton(onClick = { onChange(null) }) { Icon(Icons.Rounded.Close, "Effacer") }
-            else IconButton(onClick = { open = true }) { Icon(Icons.Rounded.CalendarMonth, "Choisir") }
+            if (clearable && !value.isNullOrBlank()) IconButton(onClick = { onChange(null) }) { Icon(Icons.Rounded.Close, stringResource(R.string.action_clear)) }
+            else IconButton(onClick = { open = true }) { Icon(Icons.Rounded.CalendarMonth, stringResource(R.string.action_pick_date)) }
         },
         modifier = modifier.fillMaxWidth(),
         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }.also { src ->
@@ -79,9 +81,9 @@ fun DateField(value: String?, onChange: (String?) -> Unit, label: String, modifi
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { onChange(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toString()) }
                     open = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.action_ok)) }
             },
-            dismissButton = { TextButton(onClick = { open = false }) { Text("Annuler") } },
+            dismissButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.action_cancel)) } },
         ) { DatePicker(state) }
     }
 }
@@ -91,8 +93,8 @@ fun TimeDialog(initial: LocalTime = LocalTime.of(8, 0), onDismiss: () -> Unit, o
     val state = rememberTimePickerState(initial.hour, initial.minute, is24Hour = true)
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onPick(LocalTime.of(state.hour, state.minute)) }) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+        confirmButton = { TextButton(onClick = { onPick(LocalTime.of(state.hour, state.minute)) }) { Text(stringResource(R.string.action_ok)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
         text = { TimePicker(state) },
     )
 }
@@ -105,9 +107,9 @@ fun TimesEditor(csv: String, onChange: (String) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         times.forEach { t ->
             InputChip(selected = true, onClick = { onChange((times - t).joinToString(",")) }, label = { Text(t) },
-                trailingIcon = { Icon(Icons.Rounded.Close, "Retirer") })
+                trailingIcon = { Icon(Icons.Rounded.Close, stringResource(R.string.action_remove_time, t)) })
         }
-        AssistChip(onClick = { adding = true }, label = { Text("Horaire") }, leadingIcon = { Icon(Icons.Rounded.Add, null) })
+        AssistChip(onClick = { adding = true }, label = { Text(stringResource(R.string.action_add_time)) }, leadingIcon = { Icon(Icons.Rounded.Add, null) })
     }
     if (adding) TimeDialog(onDismiss = { adding = false }) { t ->
         adding = false
@@ -116,18 +118,20 @@ fun TimesEditor(csv: String, onChange: (String) -> Unit) {
 }
 
 @Composable
-fun <T> ChoiceChips(options: List<T>, selected: T?, label: (T) -> String, onSelect: (T) -> Unit) {
+fun <T> ChoiceChips(options: List<T>, selected: T?, label: @Composable (T) -> String, onSelect: (T) -> Unit) {
+
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { o -> FilterChip(selected = o == selected, onClick = { onSelect(o) }, label = { Text(label(o)) }) }
     }
 }
 
 @Composable
-fun MultiChips(options: List<String>, selectedCsv: String, onChange: (String) -> Unit) {
+fun MultiChips(options: List<String>, selectedCsv: String, label: @Composable (String) -> String = { it }, onChange: (String) -> Unit) {
     val sel = selectedCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { o ->
-            FilterChip(selected = o in sel, onClick = { onChange((if (o in sel) sel - o else sel + o).joinToString(",")) }, label = { Text(o) })
+            FilterChip(selected = o in sel, onClick = { onChange((if (o in sel) sel - o else sel + o).joinToString(",")) }, label = { Text(label(o)) })
+
         }
     }
 }

@@ -6,21 +6,26 @@ package `com.karelisio.patoune`. Worker Cloudflare dans `/worker`. Tout en fran�
 ## Commandes
 - Appli : `./gradlew assembleRelease lint testDebugUnitTest` (SDK Android requis ; `local.properties` → `sdk.dir`).
 - Worker : `cd worker && npm ci && npm run typecheck && npm test` (vitest + `@cloudflare/vitest-plugin`/Miniflare).
+- Captures : `./gradlew recordRoborazziDebug` → `app/build/outputs/roborazzi` (non commitées ; artefact CI `captures`).
 - Version : fichier `VERSION` (X.Y.Z) = versionName ; versionCode = `GITHUB_RUN_NUMBER`.
 
 ## Standards
 - Dépendances uniquement dans `gradle/libs.versions.toml`, versions stables. Pas de DI framework : `AppContainer`.
 - Logique pure et testée dans `domain/` (JVM) ; Robolectric pour Room/DataStore (`app/src/test`).
+- Tests Compose sous Robolectric dans `app/src/test/.../ui` : `UiTestApp` (base en mémoire), textes via `R.string`.
 - Toute écriture de données passe par `Store.save/delete` (jamais un DAO directement), sauf champs locaux (`saveLocal`).
 - Respecter « réduire les animations » (`rememberReduceMotion`) ; textes d'aide médicale discrets (`VetNote`).
+- Textes : res/values (fr) + values-en ; jamais de texte en dur (valeurs stockées FR = clés, libellés via `ui/Texts.kt`).
+
 - Lint en erreur = build rouge. Garder les gardes d'API (minSdk 29, compileSdk 37.2).
 - Rien de sensible commité : google-services.json, keystore, `.dev.vars` sont ignorés.
 
 ## Architecture (app/src/main/java/com/karelisio/patoune)
 - `data/` : entités Room (toutes `Syncable` : id UUID, createdBy, updatedAt, deleted), DAO, `Store`, `Settings` (DataStore).
 - `domain/` : HLC, fusion d'événements, crypto (AES-GCM, PBKDF2, ECDH P-256, HKDF), respiration, garde-fou double dose,
-  stock, planification des rappels, observance, détection de pics.
-- `reminders/` : AlarmManager `setExactAndAllowWhileIdle`, actions de notification, `DailyWorker` (ordonnances, soins, pollens).
+  stock, planification des rappels, prise en retard (`LateCheck`), historique des traitements (`MedDiff`), observance, détection de pics.
+- `reminders/` : AlarmManager `setExactAndAllowWhileIdle` (ou `setAlarmClock` + `ReminderAlarmActivity` plein écran en mode réveil),
+  vérif « en retard » (PendingIntent distinct), actions de notification, `DailyWorker` (ordonnances, soins, pollens).
 - `sync/` : `HttpApi`, `SessionStore` (secrets scellés par Android Keystore), `SyncEngine`, `HouseholdManager`, FCM.
 - `media/` (CameraX, Media3 720p, analyse de mouvement), `report/` (PDF), `air/` (Open-Meteo), `backup/`, `widget/` (Glance, tuile).
 - `ui/` : `AppNav` (navigation type-safe), écrans dans `ui/screens`, composants dans `ui/components`.
@@ -37,7 +42,7 @@ package `com.karelisio.patoune`. Worker Cloudflare dans `/worker`. Tout en fran�
 - Envoi : lots chiffrés `Envelope` = [epoch 2 octets][AES-GCM(gzip(JSON))], AAD `householdId|blob|blobId`.
 - Réception : `/v1/blobs?after=seq`, fusion « dernier écrit gagne par champ » (HLC, puis deviceId), horloges par champ
   dans `field_clocks`. Suppressions = champ `deleted` (tombstone). Idempotent, indépendant de l'ordre → convergence.
-- Médias : chiffrés (AAD `householdId|media|id`) sur R2 ; pushs FCM « data » chiffrés (AAD `householdId|push`).
+- Médias : morceaux de 1 Mio chiffrés (AAD `householdId|media|id|n|total`) sur R2, reprise via `upload-progress/` ; pushs FCM « data » chiffrés (AAD `householdId|push`).
 - Le Worker ne voit que des identifiants aléatoires, des clés publiques, des jetons hachés et des blobs opaques.
   La clé du foyer ne transite que par le QR code (ou le code de secours).
 

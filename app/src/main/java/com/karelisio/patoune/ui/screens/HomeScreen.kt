@@ -1,5 +1,9 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
@@ -58,8 +62,8 @@ fun HomeScreen(vm: MainViewModel) {
     Scaffold(topBar = { AnimalTopBar(vm) }) { pad ->
         LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (animal == null) {
-                item { EmptyState(Icons.Rounded.Pets, "Bienvenue sur Patoune", "Ajoutez votre premier compagnon pour commencer le suivi.") }
-                item { Button(onClick = { nav.navigate(Routes.AnimalEdit()) }, Modifier.fillMaxWidth()) { Text("Ajouter un animal") } }
+                item { EmptyState(Icons.Rounded.Pets, stringResource(R.string.home_welcome), stringResource(R.string.home_welcome_body)) }
+                item { Button(onClick = { nav.navigate(Routes.AnimalEdit()) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.animal_add)) } }
                 return@LazyColumn
             }
             item { CrisisNowButton { nav.navigate(Routes.CrisisEdit(startRecording = true)) } }
@@ -67,11 +71,11 @@ fun HomeScreen(vm: MainViewModel) {
                 androidx.compose.material3.OutlinedButton(onClick = { nav.navigate(Routes.Emergency) }, modifier = Modifier.fillMaxWidth()) {
                     androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.LocalHospital, null)
                     androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
-                    Text("Fiche urgence")
+                    Text(stringResource(R.string.emergency_title))
                 }
             }
             item { animal?.let { a -> BreathSummaryCard(a, breaths) { nav.navigate(Routes.BreathCounter()) } } }
-            if (statuses.isNotEmpty()) item { Text("À donner", style = MaterialTheme.typography.titleMedium) }
+            if (statuses.isNotEmpty()) item { Text(stringResource(R.string.home_due), style = MaterialTheme.typography.titleMedium) }
             items(statuses, key = { it.med.id }) { s -> DueMedCard(s, shared, onGive = { ctrl.give(s.med) }, onOpen = { nav.navigate(Routes.MedicationDetail(s.med.id)) }) }
         }
     }
@@ -91,14 +95,18 @@ fun DueMedCard(s: MedStatus, shared: Boolean, onGive: () -> Unit, onOpen: () -> 
 /** Bouton « Crise en cours » : un tap lance la vidéo et horodate. */
 @Composable
 fun CrisisNowButton(onClick: () -> Unit) {
+    val description = stringResource(R.string.a11y_crisis_now)
     androidx.compose.material3.Button(
         onClick = onClick,
+        // Le bouton fusionne ses enfants (rôle bouton) : le texte porte un libellé explicite pour TalkBack.
         modifier = Modifier.fillMaxWidth().height(72.dp),
         shape = com.karelisio.patoune.ui.components.PawShapes.pill,
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
     ) {
         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Videocam, null)
         androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
-        Text("Crise en cours", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.crisis_now), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { contentDescription = description })
+
+
     }
 }

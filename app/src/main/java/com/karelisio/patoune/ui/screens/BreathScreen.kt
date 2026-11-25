@@ -1,5 +1,13 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -68,7 +76,7 @@ import com.karelisio.patoune.ui.components.cascade
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
-enum class Range(val label: String, val days: Long?) { WEEK("7 jours", 7), MONTH("30 jours", 30), ALL("Tout", null) }
+enum class Range(@StringRes val label: Int, val days: Long?) { WEEK(R.string.range_week, 7), MONTH(R.string.range_month, 30), ALL(R.string.range_all, null) }
 
 fun Breath.Trend.icon(): ImageVector = when (this) {
     Breath.Trend.UP -> Icons.AutoMirrored.Rounded.TrendingUp
@@ -76,10 +84,11 @@ fun Breath.Trend.icon(): ImageVector = when (this) {
     Breath.Trend.STABLE -> Icons.AutoMirrored.Rounded.TrendingFlat
 }
 
-fun Breath.Trend.label(): String = when (this) {
-    Breath.Trend.UP -> "en hausse"
-    Breath.Trend.DOWN -> "en baisse"
-    Breath.Trend.STABLE -> "stable"
+@StringRes
+fun Breath.Trend.labelRes(): Int = when (this) {
+    Breath.Trend.UP -> R.string.trend_up
+    Breath.Trend.DOWN -> R.string.trend_down
+    Breath.Trend.STABLE -> R.string.trend_stable
 }
 
 /** Bandes de pollens (max du jour, normalisé sur 200 grains/m³). */
@@ -95,25 +104,31 @@ fun BreathSummaryCard(animal: Animal, counts: List<BreathCount>, onCount: () -> 
     SectionCard(container = MaterialTheme.colorScheme.primaryContainer) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Fréquence respiratoire", style = MaterialTheme.typography.titleMedium)
-                if (last == null) Text("Aucune mesure pour l'instant")
+                Text(stringResource(R.string.breath_rate), style = MaterialTheme.typography.titleMedium)
+                if (last == null) Text(stringResource(R.string.breath_none_yet))
                 else {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        AnimatedNumber(Breath.format(last.bpm), MaterialTheme.typography.displayMedium)
-                        Spacer(Modifier.width(6.dp))
-                        Text("resp/min", Modifier.padding(bottom = 8.dp))
-                    }
                     val trend = Breath.trend(counts.takeLast(6).reversed().map { it.bpm })
+                    val bpm = Breath.format(last.bpm)
+                    val spoken = stringResource(R.string.a11y_breath_rate, bpm, stringResource(trend.labelRes()))
+                    // Annonce vivante : TalkBack lit la nouvelle valeur entière quand elle change.
+                    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.clearAndSetSemantics {
+                        liveRegion = LiveRegionMode.Polite
+                        contentDescription = spoken
+                    }) {
+                        AnimatedNumber(bpm, MaterialTheme.typography.displayMedium)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.bpm_unit), Modifier.padding(bottom = 8.dp))
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(trend.icon(), null)
                         Spacer(Modifier.width(4.dp))
-                        Text("${trend.label()} · ${Dates.fmtDayTime(last.at)}", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.pair_dot, stringResource(trend.labelRes()), Dates.fmtDayTime(last.at)), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
             ShapeBadge(Icons.Rounded.Air, PawShapes.soft, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary, 64.dp)
         }
-        Button(onClick = onCount, Modifier.fillMaxWidth()) { Text("Compter les respirations") }
+        Button(onClick = onCount, Modifier.fillMaxWidth()) { Text(stringResource(R.string.shortcut_breath)) }
         if (last != null && Breath.exceeds(last.bpm, animal.breathThreshold)) ThresholdBanner(animal, last)
     }
 }
@@ -124,7 +139,7 @@ fun ThresholdBanner(animal: Animal, last: BreathCount) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Warning, null, tint = MaterialTheme.colorScheme.onErrorContainer)
             Spacer(Modifier.width(8.dp))
-            Text("Dernière mesure ${Breath.format(last.bpm)} resp/min, au-dessus du seuil fixé avec le véto (${animal.breathThreshold}).",
+            Text(stringResource(R.string.breath_over_threshold, Breath.format(last.bpm), animal.breathThreshold ?: 0),
                 color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium)
         }
     }
@@ -146,59 +161,61 @@ fun BreathScreen(vm: MainViewModel) {
     Scaffold(topBar = { AnimalTopBar(vm) }) { pad ->
         val a = animal
         LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (a == null) { item { EmptyState(Icons.Rounded.Air, "Aucun animal", "Ajoutez un animal pour suivre sa respiration.") }; return@LazyColumn }
+            if (a == null) { item { EmptyState(Icons.Rounded.Air, stringResource(R.string.animals_empty), stringResource(R.string.breath_no_animal_body)) }; return@LazyColumn }
             item { BreathSummaryCard(a, counts) { nav.navigate(Routes.BreathCounter()) } }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { nav.navigate(Routes.BreathCounter(night = true)) }, Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.Bedtime, null); Spacer(Modifier.width(6.dp)); Text("Mode nuit")
+                        Icon(Icons.Rounded.Bedtime, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.breath_night_mode))
                     }
                     FilledTonalButton(onClick = { nav.navigate(Routes.BreathAuto) }, Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text("Comptage auto")
+                        Icon(Icons.Rounded.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.breath_auto))
                     }
                 }
             }
             item {
                 SectionCard {
-                    Text("Tendance", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.breath_trend), style = MaterialTheme.typography.titleMedium)
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                         Range.entries.forEachIndexed { i, r ->
-                            SegmentedButton(r == range, { range = r }, SegmentedButtonDefaults.itemShape(i, Range.entries.size)) { Text(r.label) }
+                            SegmentedButton(r == range, { range = r }, SegmentedButtonDefaults.itemShape(i, Range.entries.size)) { Text(stringResource(r.label)) }
                         }
                     }
                     val from = range.days?.let { System.currentTimeMillis() - it * 86_400_000L } ?: 0L
                     val shown = counts.filter { it.at >= from }
-                    if (shown.isEmpty()) Text("Pas de mesure sur cette période.", style = MaterialTheme.typography.bodyMedium)
+                    if (shown.isEmpty()) Text(stringResource(R.string.breath_none_period), style = MaterialTheme.typography.bodyMedium)
                     else {
                         val pts = shown.map { ChartPoint(it.at, it.bpm) }
                         val avg = Breath.movingAverage(shown.map { it.bpm }).mapIndexed { i, v -> ChartPoint(shown[i].at, v) }
                         val airShown = if (showPollen) air.filter { Dates.startOfDay(java.time.LocalDate.parse(it.date)) >= from - 86_400_000L } else emptyList()
                         TrendChart(pts, average = avg, threshold = a.breathThreshold?.toDouble(), markers = crises.map { it.startAt }.filter { it >= from },
-                            bands = airBands(airShown), unit = "resp/min")
-                        Text("Moyenne ${Breath.format(shown.map { it.bpm }.average())} · max ${Breath.format(shown.maxOf { it.bpm })} · ${shown.size} mesure(s)",
+                            bands = airBands(airShown), unit = stringResource(R.string.bpm_unit))
+                        Text(pluralStringResource(R.plurals.breath_stats, shown.size, Breath.format(shown.map { it.bpm }.average()), Breath.format(shown.maxOf { it.bpm }), shown.size),
                             style = MaterialTheme.typography.labelLarge)
-                        Text("— moyenne mobile · ┄ seuil véto · ● crises" + if (settings?.city != null) " · fond : pollens (${settings?.city})" else "",
+                        val city = settings?.city
+                        Text(if (city != null) stringResource(R.string.breath_legend_pollen, city) else stringResource(R.string.breath_legend),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (settings?.city != null) TextButton(onClick = { showPollen = !showPollen }) { Text(if (showPollen) "Masquer les pollens" else "Afficher les pollens") }
+                        if (city != null) TextButton(onClick = { showPollen = !showPollen }) { Text(stringResource(if (showPollen) R.string.breath_hide_pollen else R.string.breath_show_pollen)) }
                     }
                     VetNote()
                 }
             }
-            item { Text("Mesures", style = MaterialTheme.typography.titleMedium) }
+            item { Text(stringResource(R.string.breath_measures), style = MaterialTheme.typography.titleMedium) }
             items(counts.reversed(), key = { it.id }) { b ->
                 ListItem(
                     modifier = Modifier.cascade(0).clickable { },
-                    headlineContent = { Text("${Breath.format(b.bpm)} resp/min" + if (b.estimated) " (estimation validée)" else "") },
+                    headlineContent = { Text(stringResource(if (b.estimated) R.string.bpm_value_estimated else R.string.bpm_value, Breath.format(b.bpm))) },
                     supportingContent = {
-                        Text("${Dates.fmtDayTime(b.at)} · ${b.context.label}" + (if (b.note.isNotBlank()) " · ${b.note}" else "") +
-                            if (settings?.shared == true && b.createdBy.isNotBlank()) " · ${b.createdBy}" else "")
+                        Text(listOfNotNull(Dates.fmtDayTime(b.at), stringResource(b.context.labelRes), b.note.takeIf { it.isNotBlank() },
+                            b.createdBy.takeIf { settings?.shared == true && it.isNotBlank() }).joinToString(" · "))
                     },
                     leadingContent = {
                         val over = Breath.exceeds(b.bpm, a.breathThreshold)
                         ShapeBadge(Icons.Rounded.Air, PawShapes.pad, if (over) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
                             if (over) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer, 40.dp)
                     },
-                    trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(b) } }) { Icon(Icons.Rounded.Delete, "Supprimer") } },
+                    trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(b) } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.breath_delete, Breath.format(b.bpm), Dates.fmtDayTime(b.at))) } },
+
                 )
             }
         }

@@ -51,6 +51,18 @@ jobs:
           WORKER_URL: ${{ vars.WORKER_URL }}
         run: ./gradlew assembleRelease lint testDebugUnitTest --stacktrace
 
+      # Captures Roborazzi (Robolectric) des écrans principaux : informatives, elles ne bloquent pas la release.
+      - name: Captures d'écran
+        continue-on-error: true
+        run: ./gradlew recordRoborazziDebug --tests 'com.karelisio.patoune.ui.ScreenshotsTest' --stacktrace
+
+      - name: Upload captures
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures
+          path: app/build/outputs/roborazzi
+          if-no-files-found: warn
+
       - name: Test reports
         if: failure()
         uses: actions/upload-artifact@v4

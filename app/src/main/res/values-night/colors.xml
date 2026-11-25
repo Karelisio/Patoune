@@ -1,3 +1,5 @@
 <resources>
     <color name="splash_background">#1A110E</color>
+    <color name="widget_crisis_bg">#7B3317</color>
+    <color name="widget_crisis_fg">#FFDBCF</color>
 </resources>

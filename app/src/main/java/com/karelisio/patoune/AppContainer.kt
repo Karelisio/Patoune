@@ -27,11 +27,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 
-/** Injection de dépendances manuelle : un seul conteneur pour toute l'appli. */
-class AppContainer(val context: Context) {
+/**
+ * Injection de dépendances manuelle : un seul conteneur pour toute l'appli.
+ * Base et réglages remplaçables pour les tests d'interface (base en mémoire, réglages isolés).
+ */
+class AppContainer(
+    val context: Context,
+    val db: PatouneDb = PatouneDb.build(context),
+    val settings: Settings = Settings(context),
+) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val db: PatouneDb = PatouneDb.build(context)
-    val settings = Settings(context)
     val deviceId: String = runBlocking { settings.deviceId() }
 
     /** Mode partagé actif (mis à jour depuis les réglages) : évite de lire DataStore à chaque écriture. */

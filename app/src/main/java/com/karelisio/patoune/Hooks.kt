@@ -15,7 +15,9 @@ open class Hooks(private val c: AppContainer) {
     open suspend fun onDose(med: Medication, log: DoseLog) {
         if (shared() && log.status == com.karelisio.patoune.data.DoseStatus.GIVEN) {
             val animal = c.db.animals().byId(med.animalId)?.name.orEmpty()
-            onPush(PushType.DOSE, "${med.name} donné", "Pour $animal à ${com.karelisio.patoune.domain.Dates.fmtTime(log.takenAt)}", med.id)
+            onPush(PushType.DOSE, c.context.getString(R.string.push_dose_title, med.name),
+                c.context.getString(R.string.push_dose_body, animal, com.karelisio.patoune.domain.Dates.fmtTime(log.takenAt)), med.id)
+
         }
         onDataChanged()
     }
@@ -35,6 +37,7 @@ open class Hooks(private val c: AppContainer) {
     }
 
     open suspend fun onDaily() {
+        c.widgets.refresh()
         // Pollens du jour (Open-Meteo, pas le backend) : silencieux hors ligne.
         val s = c.settings.current()
         if (s.city != null && s.cityLat != null && s.cityLon != null) runCatching { c.air.fetch(s.city, s.cityLat, s.cityLon) }
@@ -52,7 +55,10 @@ open class Hooks(private val c: AppContainer) {
         if ("medication" in entities) c.reminders.rescheduleAll()
         for (id in medIds) {
             val med = c.db.medications().byId(id) ?: continue
-            if (c.doses.alreadyGiven(med) != null) com.karelisio.patoune.reminders.Notif.cancel(c.context, com.karelisio.patoune.reminders.ReminderScheduler.notifId(id))
+            if (c.doses.alreadyGiven(med) != null) {
+                com.karelisio.patoune.reminders.Notif.cancel(c.context, com.karelisio.patoune.reminders.ReminderScheduler.notifId(id))
+                com.karelisio.patoune.reminders.Notif.cancel(c.context, com.karelisio.patoune.reminders.ReminderScheduler.latePushNotifId(id))
+            }
         }
         c.widgets.refresh()
     }

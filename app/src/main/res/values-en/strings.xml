@@ -1,0 +1,733 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common actions -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_ok">OK</string>
+    <string name="action_no">No</string>
+    <string name="action_back">Back</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_pick_date">Pick a date</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_add_time">Time</string>
+    <string name="action_remove_time">Remove %1$s</string>
+    <string name="vet_note_default">A tracking aid, not medical advice. Thresholds set with your vet.</string>
+
+    <!-- Stored values (display) -->
+    <string name="med_type_inhaler">Inhaler with spacer</string>
+    <string name="med_type_tablet">Tablet</string>
+    <string name="med_type_liquid">Liquid</string>
+    <string name="med_type_other">Other</string>
+    <plurals name="unit_inhaler">
+        <item quantity="one">%1$s puff</item>
+        <item quantity="other">%1$s puffs</item>
+    </plurals>
+    <plurals name="unit_tablet">
+        <item quantity="one">%1$s tablet</item>
+        <item quantity="other">%1$s tablets</item>
+    </plurals>
+    <plurals name="unit_liquid">
+        <item quantity="one">%1$s mL</item>
+        <item quantity="other">%1$s mL</item>
+    </plurals>
+    <plurals name="unit_other">
+        <item quantity="one">%1$s dose</item>
+        <item quantity="other">%1$s doses</item>
+    </plurals>
+    <string name="units_inhaler">puffs</string>
+    <string name="units_tablet">tablets</string>
+    <string name="units_liquid">mL</string>
+    <string name="units_other">doses</string>
+    <string name="med_units_per_dose">%1$s per dose</string>
+    <string name="breath_ctx_sleep">Sleeping</string>
+    <string name="breath_ctx_rest">Resting</string>
+    <string name="breath_ctx_other">Other</string>
+    <string name="crisis_type_cough">Cough</string>
+    <string name="crisis_type_open_mouth">Open-mouth breathing</string>
+    <string name="crisis_type_wheeze">Wheezing</string>
+    <string name="crisis_type_abdominal">Abdominal breathing</string>
+    <string name="crisis_type_retch">Retching</string>
+    <string name="crisis_type_other">Other</string>
+    <string name="trigger_litter">Litter</string>
+    <string name="trigger_perfume">Perfume</string>
+    <string name="trigger_cleaning">Cleaning</string>
+    <string name="trigger_smoke">Smoke</string>
+    <string name="trigger_pollen">Pollen</string>
+    <string name="trigger_season">Season</string>
+    <string name="trigger_stress">Stress</string>
+    <string name="attach_none">Unattached</string>
+    <string name="attach_animal">Profile</string>
+    <string name="attach_crisis">Attack</string>
+    <string name="attach_breath">Count</string>
+    <string name="attach_visit">Visit</string>
+    <string name="attach_observation">Observation</string>
+    <string name="attach_document">Document</string>
+    <string name="obs_appetite">Appetite</string>
+    <string name="obs_water">Water</string>
+    <string name="obs_litter">Litter box</string>
+    <string name="obs_vomit">Vomiting</string>
+    <string name="obs_behavior">Behaviour</string>
+    <string name="obs_opt_normal">Normal</string>
+    <string name="obs_opt_normal_f">Normal</string>
+    <string name="obs_opt_decreased">Decreased</string>
+    <string name="obs_opt_absent">None</string>
+    <string name="obs_opt_increased">Increased</string>
+    <string name="obs_opt_little">Little</string>
+    <string name="obs_opt_a_lot">A lot</string>
+    <string name="obs_opt_diarrhea">Diarrhoea</string>
+    <string name="obs_opt_constipation">Constipation</string>
+    <string name="obs_opt_urine">Urine ++</string>
+    <string name="obs_opt_nothing">Nothing</string>
+    <string name="obs_opt_none">None</string>
+    <string name="obs_opt_hairball">Hairball</string>
+    <string name="obs_opt_food">Food</string>
+    <string name="obs_opt_bile">Bile</string>
+    <string name="obs_opt_calm">Calm</string>
+    <string name="obs_opt_lethargic">Lethargic</string>
+    <string name="obs_opt_restless">Restless</string>
+    <string name="obs_opt_hiding">Hiding</string>
+    <string name="care_vaccine">Vaccine</string>
+    <string name="care_deworm">Dewormer</string>
+    <string name="care_flea">Flea treatment</string>
+    <string name="doc_prescription">Prescription</string>
+    <string name="doc_analysis">Lab test</string>
+    <string name="doc_other">Other</string>
+    <string name="species_cat">Cat</string>
+    <string name="species_dog">Dog</string>
+    <string name="species_rabbit">Rabbit</string>
+    <string name="species_other">Other</string>
+    <string name="sex_female">Female</string>
+    <string name="sex_male">Male</string>
+
+    <!-- Trigger analysis -->
+    <string name="daypart_morning">in the morning</string>
+    <string name="daypart_afternoon">in the afternoon</string>
+    <string name="daypart_evening">in the evening</string>
+    <string name="daypart_night">at night</string>
+    <string name="insights_pollen">On attack days, average pollen was %1$d grains/m³ versus %2$d on other days.</string>
+    <string name="insights_pollen_none">Pollen: not enough data yet.</string>
+    <string name="insights_aqi">On attack days, the average air quality index was %1$d versus %2$d on other days.</string>
+    <string name="insights_aqi_none">Air quality: not enough data yet.</string>
+    <string name="insights_breath">On high-pollen days, the average breathing rate was %1$d bpm versus %2$d on low-pollen days.</string>
+    <string name="insights_breath_none">Breathing and pollen: not enough data yet.</string>
+    <string name="insights_daypart_no_crisis">Time of day: no attacks.</string>
+    <string name="insights_daypart_none">No dominant time of day.</string>
+    <string name="insights_daypart">Attacks happen most often %1$s (%2$d of %3$d).</string>
+    <string name="insights_share">%1$s %2$d (%3$d%%)</string>
+    <string name="insights_month_count">%1$s: %2$d</string>
+
+    <!-- Treatment history -->
+    <string name="med_change_line">%1$s: %2$s → %3$s</string>
+    <string name="med_change_created">New treatment</string>
+    <string name="med_change_created_with">New treatment: %1$s</string>
+    <string name="med_change_as_needed">as needed</string>
+    <string name="med_change_from">from %1$s</string>
+    <string name="med_change_until">until %1$s</string>
+    <string name="med_change_name">Name</string>
+    <string name="med_change_dose">Dose</string>
+    <string name="med_change_times">Times</string>
+    <string name="med_change_to_as_needed">Mode: fixed times → as needed</string>
+    <string name="med_change_to_fixed">Mode: as needed → times %1$s</string>
+    <string name="med_change_start">Start</string>
+    <string name="med_change_end">End</string>
+    <string name="med_change_alarm_on">Alarm-style reminder: on</string>
+    <string name="med_change_alarm_off">Alarm-style reminder: off</string>
+
+    <!-- Components -->
+    <string name="dose_given">Given</string>
+    <string name="a11y_mark_given">Mark as given</string>
+    <string name="a11y_already_given">Already given</string>
+    <string name="animal_add">Add a pet</string>
+    <string name="animal_new">New pet</string>
+    <string name="animal_manage">Manage pets</string>
+    <string name="animal_edit_named">Edit %1$s</string>
+    <string name="a11y_choose_animal">Choose pet</string>
+    <string name="a11y_chart_empty">Empty chart: no measurements.</string>
+    <plurals name="a11y_chart_summary">
+        <item quantity="one">Chart: %1$d measurement, from %2$s to %3$s %5$s, latest %4$s %5$s.</item>
+        <item quantity="other">Chart: %1$d measurements, from %2$s to %3$s %5$s, latest %4$s %5$s.</item>
+    </plurals>
+    <plurals name="a11y_chart_over">
+        <item quantity="one">%1$d above the %2$s threshold.</item>
+        <item quantity="other">%1$d above the %2$s threshold.</item>
+    </plurals>
+    <string name="perm_notifications">Notifications</string>
+    <string name="perm_notifications_why">Treatment reminders, breathing alerts and doses given by other members.</string>
+    <string name="perm_exact_alarms">Exact alarms</string>
+    <string name="perm_exact_alarms_why">So medication reminders ring right on time, even when the phone is idle.</string>
+    <string name="perm_full_screen">Full-screen reminders</string>
+    <string name="perm_full_screen_why">For alarm-style treatments: show the reminder full screen, even on the lock screen.</string>
+    <string name="perm_camera_mic">Camera and microphone</string>
+    <string name="perm_camera_mic_why">Photos, and attack videos with sound: hearing the cough is valuable for the vet.</string>
+    <string name="perm_battery">Unrestricted battery</string>
+    <string name="perm_battery_why">Some phones (Honor/MagicOS, Huawei, Xiaomi…) kill background apps: reminders and sync would be lost. Also allow auto-launch in the phone settings.</string>
+    <string name="perm_install">Installing updates</string>
+    <string name="perm_install_why">To install new versions of Patoune directly from the app.</string>
+
+    <!-- Navigation and home -->
+    <string name="tab_home">Home</string>
+    <string name="tab_treatments">Care</string>
+    <string name="tab_breath">Breathing</string>
+    <string name="tab_journal">Journal</string>
+    <string name="tab_health">Records</string>
+    <string name="home_welcome">Welcome to Patoune</string>
+    <string name="home_welcome_body">Add your first companion to start tracking.</string>
+    <string name="home_due">Due</string>
+    <string name="crisis_now">Attack now</string>
+    <string name="a11y_crisis_now">Attack now: record and timestamp the attack right away</string>
+
+    <!-- Treatments -->
+    <string name="pair_dot">%1$s · %2$s</string>
+    <string name="delete_named_q">Delete %1$s?</string>
+    <string name="field_notes">Notes</string>
+    <string name="med_double_title">Already given?</string>
+    <string name="med_double_body">%1$s was already marked at %2$s (%3$s). Record another dose?</string>
+    <string name="med_double_body_by">%1$s was already marked at %2$s by %3$s (%4$s). Record another dose?</string>
+    <string name="med_double_confirm">Yes, another dose</string>
+    <string name="med_given_at">Given at %1$s</string>
+    <string name="med_given_at_by">Given at %1$s by %2$s</string>
+    <string name="med_as_needed">As needed</string>
+    <string name="med_next_at">Next dose %1$s</string>
+    <string name="med_finished">Treatment ended</string>
+    <string name="med_stock">Stock: %1$s</string>
+    <string name="med_stock_low">Stock: %1$s · running low</string>
+    <string name="med_fab">Treatment</string>
+    <string name="med_empty">No treatments</string>
+    <string name="med_empty_body">Add an inhaler, tablets… and get reminders right on time.</string>
+    <string name="med_new">New treatment</string>
+    <string name="med_name">Medication name</string>
+    <string name="med_dose_hint">Dose (e.g. 1 puff, ½ tablet)</string>
+    <string name="med_as_needed_only">As needed only (no reminder)</string>
+    <string name="med_alarm_style">Alarm-style reminder (full screen, more reliable)</string>
+    <string name="med_late_minutes">Remind again if not given after (min)</string>
+    <string name="med_late_note">0 = never. In shared mode, the other members are notified too.</string>
+    <string name="med_end_optional">End (optional)</string>
+    <string name="med_track_stock">Track stock</string>
+    <string name="med_stock_remaining">Stock left (%1$s)</string>
+    <string name="med_stock_alert">Alert when this much is left</string>
+    <string name="med_renewal">Prescription renewal</string>
+    <string name="med_stock_title">Stock</string>
+    <string name="med_stock_left">Left: %1$s</string>
+    <string name="med_stock_left_days">Left: %1$s · %2$s</string>
+    <plurals name="days_about">
+        <item quantity="one">about %d day</item>
+        <item quantity="other">about %d days</item>
+    </plurals>
+    <string name="med_renewal_on">Renewal: %1$s</string>
+    <string name="med_refill_button">New bottle / new box</string>
+    <string name="med_history_changes">Treatment history</string>
+    <string name="med_history_doses">Dose history</string>
+    <string name="med_refill_title">Restock</string>
+    <string name="med_refill_field">New stock (%1$s)</string>
+    <string name="med_allow_full_screen">Allow full-screen reminders</string>
+    <string name="dose_skipped">Skipped</string>
+    <string name="dose_undo">Undo this dose</string>
+
+    <!-- Pets -->
+    <string name="delete_named">Delete %1$s</string>
+    <string name="animal_default_name">My pet</string>
+    <string name="animal_pick_photo">Choose a photo</string>
+    <string name="animal_photo_hint">Tap to choose a photo</string>
+    <string name="animal_name">Name</string>
+    <string name="animal_breed">Breed</string>
+    <string name="animal_birth">Date of birth</string>
+    <string name="animal_chip">Microchip number</string>
+    <string name="animal_sterilized">Neutered / spayed</string>
+    <string name="animal_vets">Vets</string>
+    <string name="animal_vet">Regular vet</string>
+    <string name="animal_vet_phone">Vet\'s phone</string>
+    <string name="animal_emergency_vet">Emergency vet</string>
+    <string name="animal_emergency_vet_phone">Emergency vet\'s phone</string>
+    <string name="animal_health">Health</string>
+    <string name="animal_threshold">Breathing threshold (breaths/min)</string>
+    <string name="animal_threshold_note">Set this threshold with your vet (often around 30 at rest for cats).</string>
+    <string name="animal_allergies">Allergies</string>
+    <string name="animal_history">Medical history</string>
+    <string name="animal_delete_profile">Delete this profile</string>
+    <string name="animal_profile">Profile</string>
+    <string name="animal_delete_body">The profile and its records will no longer be shown.</string>
+    <string name="animals_title">My pets</string>
+    <string name="animals_fab">Pet</string>
+    <string name="animals_empty">No pets</string>
+    <string name="animals_empty_body">Add your first companion.</string>
+    <string name="animals_move_up">Move %1$s up</string>
+    <string name="animals_move_down">Move %1$s down</string>
+    <string name="animals_delete_body">The profile, its treatments and their reminders will be deleted.</string>
+    <string name="animals_delete_body_shared">The profile, its treatments and their reminders will be deleted, for the other household members too.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_mode">Mode</string>
+    <string name="settings_shared">Shared household</string>
+    <string name="settings_solo">Solo</string>
+    <string name="settings_shared_sub">Members, invitations, notifications, quota</string>
+    <string name="settings_solo_sub">Everything stays on this phone. Tap to share with your loved ones.</string>
+    <string name="settings_tracking">Tracking</string>
+    <string name="settings_animals">Pets</string>
+    <string name="settings_animals_sub">Order, edit, delete</string>
+    <string name="settings_report_sub">PDF for a chosen period</string>
+    <string name="settings_air_sub">Choose a city</string>
+    <string name="settings_data">Data</string>
+    <string name="settings_backup_sub">Export or import (.zip with media)</string>
+    <string name="settings_permissions_sub">Notifications, alarms, camera, battery…</string>
+    <string name="settings_about">About</string>
+    <string name="settings_update">Check for updates</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_disclaimer">Patoune is a tracking aid, not medical advice. Alert thresholds are the ones set with your vet.</string>
+    <string name="permissions_title">Permissions</string>
+    <string name="perm_granted">Granted</string>
+    <string name="perm_allow">Allow</string>
+    <string name="perm_open_settings">Open settings</string>
+
+    <!-- Backup -->
+    <string name="error_failed">Failed: %1$s</string>
+    <string name="backup_title">Encrypted backup</string>
+    <string name="backup_short">Backup</string>
+    <string name="backup_done">Backup created. Keep the password: without it, the backup cannot be read.</string>
+    <string name="backup_imported">Import complete: %1$s, %2$s.</string>
+    <plurals name="backup_fields">
+        <item quantity="one">%d field merged</item>
+        <item quantity="other">%d fields merged</item>
+    </plurals>
+    <plurals name="backup_media">
+        <item quantity="one">%d media file</item>
+        <item quantity="other">%d media files</item>
+    </plurals>
+    <string name="backup_wrong_password">Wrong password.</string>
+    <string name="backup_export">Export</string>
+    <string name="backup_export_body">All data and media, encrypted with your password (.zip).</string>
+    <string name="backup_password">Password (8 characters min.)</string>
+    <string name="backup_confirm">Confirm</string>
+    <string name="backup_import">Import</string>
+    <string name="backup_import_body">Merges a backup with the current data (nothing is erased).</string>
+    <string name="backup_import_password">Backup password</string>
+    <string name="backup_pick_file">Choose the file</string>
+
+    <!-- Emergency sheet -->
+    <string name="emergency_title">Emergency sheet</string>
+    <string name="emergency_weight">Weight: %1$s kg (%2$s)</string>
+    <string name="emergency_vet_button">Emergency vet · %1$s</string>
+    <string name="vet_button">Regular vet · %1$s</string>
+    <string name="a11y_call_emergency_vet">Call the emergency vet, %1$s</string>
+    <string name="a11y_call_vet">Call the regular vet, %1$s</string>
+    <string name="emergency_no_numbers">Add your vets\' phone numbers in the profile.</string>
+    <string name="emergency_current_treatment">Current treatment</string>
+    <string name="emergency_none">None</string>
+    <string name="emergency_med_as_needed">• %1$s — %2$s (as needed)</string>
+    <string name="emergency_med_times">• %1$s — %2$s at %3$s</string>
+    <string name="emergency_key_info">Key information</string>
+    <string name="emergency_allergies">Allergies: %1$s</string>
+    <string name="emergency_no_allergy">none known</string>
+    <string name="emergency_history">Medical history: %1$s</string>
+    <string name="emergency_born">Born on %1$s</string>
+    <string name="emergency_chip">Microchip: %1$s</string>
+    <string name="emergency_sterilized_yes">Neutered / spayed: yes</string>
+    <string name="emergency_sterilized_no">Neutered / spayed: no</string>
+    <string name="emergency_threshold">Breathing threshold set with the vet: %1$d breaths/min</string>
+    <string name="emergency_disclaimer">Patoune is a tracking aid and does not replace your vet\'s advice.</string>
+
+    <!-- Health records -->
+    <string name="field_date">Date</string>
+    <string name="weight_kg">%1$s kg</string>
+    <string name="health_tab_care">Care</string>
+    <string name="health_tab_visits">Visits</string>
+    <string name="health_tab_weight">Weight</string>
+    <string name="health_tab_documents">Documents</string>
+    <string name="health_fab_care">Care</string>
+    <string name="health_fab_visit">Visit</string>
+    <string name="health_fab_weight">Weigh-in</string>
+    <string name="health_fab_document">Document</string>
+    <string name="health_care_empty">No care items</string>
+    <string name="health_care_empty_body">Vaccines, dewormers and flea treatments, with a reminder for the next one due.</string>
+    <string name="health_care_done">Done on %1$s</string>
+    <string name="health_care_done_due">Done on %1$s · due %2$s</string>
+    <string name="health_care_product">Product (e.g. FVRCP, Milbemax)</string>
+    <string name="health_care_next_due">Next due</string>
+    <string name="health_plus_1_month">+1 month</string>
+    <string name="health_plus_3_months">+3 months</string>
+    <string name="health_plus_1_year">+1 year</string>
+    <string name="health_visit_empty">No visits</string>
+    <string name="health_visit_empty_body">Reason, report and next visit to the vet.</string>
+    <string name="health_next_visit_on">Next visit: %1$s</string>
+    <string name="health_visit_reason">Reason</string>
+    <string name="health_visit_report">Report</string>
+    <string name="health_next_visit">Next visit</string>
+    <string name="media_photo">Photo</string>
+    <string name="media_attach">Attach</string>
+    <string name="health_weight_empty">No weigh-ins</string>
+    <string name="health_weight_empty_body">Add weigh-ins to follow the weight curve.</string>
+    <string name="health_weight_current">Current weight: %1$s kg</string>
+    <string name="health_weight_delete">Delete the %1$s kg weigh-in from %2$s</string>
+    <string name="health_weight_field">Weight (kg)</string>
+    <string name="health_doc_empty">No documents</string>
+    <string name="health_doc_empty_body">Prescriptions and lab tests as PDF or photo, available offline.</string>
+    <string name="health_doc_title">Title</string>
+    <string name="health_doc_pick">PDF or image</string>
+    <string name="health_doc_shoot">Take a photo</string>
+    <string name="health_doc_attached">File attached ✓</string>
+
+    <!-- Journal: attacks and observations -->
+    <string name="journal_fab">Log an attack</string>
+    <string name="journal_tab_crises">Attacks</string>
+    <string name="journal_tab_observations">Observations</string>
+    <string name="journal_tab_gallery">Gallery</string>
+    <string name="journal_empty">No attacks logged</string>
+    <string name="journal_empty_body">Use “Attack now” on the home screen to record and timestamp in one tap.</string>
+    <string name="crisis_summary">Intensity %1$d/5 · %2$s</string>
+    <string name="crisis_noted_by">Logged by %1$s</string>
+    <string name="crisis_triggers_list">Triggers: %1$s</string>
+    <string name="duration_sec">%1$d s</string>
+    <string name="duration_min">%1$d min</string>
+    <string name="duration_min_sec">%1$d min %2$d s</string>
+    <string name="push_crisis_now">Attack in progress: %1$s</string>
+    <string name="push_crisis_start">Started at %1$s</string>
+    <string name="push_crisis_saved">Attack logged: %1$s</string>
+    <string name="push_crisis_saved_body">Intensity %1$d/5 at %2$s</string>
+    <string name="crisis_title">Attack</string>
+    <string name="crisis_edit_title">Edit attack</string>
+    <string name="crisis_change_time">Change time</string>
+    <string name="crisis_media">Videos and photos</string>
+    <string name="crisis_film">Record</string>
+    <string name="crisis_duration_field">Duration (seconds)</string>
+    <string name="crisis_intensity">Intensity: %1$d/5</string>
+    <string name="crisis_type">Type</string>
+    <string name="crisis_rescue">Rescue treatment given</string>
+    <string name="crisis_rescue_other">Other treatment / dose</string>
+    <string name="crisis_triggers">Possible triggers</string>
+    <string name="crisis_vet_note">In case of respiratory distress, contact your vet or the emergency vet immediately.</string>
+    <string name="obs_line">%1$s: %2$s</string>
+    <string name="obs_add_note">Add a note</string>
+    <string name="obs_history">History</string>
+    <string name="obs_note">Note</string>
+
+    <!-- Insights card -->
+    <string name="insights_title">Insights</string>
+    <plurals name="insights_total">
+        <item quantity="one">%d attack in 12 months</item>
+        <item quantity="other">%d attacks in 12 months</item>
+    </plurals>
+    <string name="insights_collapse">Collapse insights</string>
+    <string name="insights_expand">Expand insights</string>
+    <string name="insights_per_month">Attacks per month</string>
+    <string name="insights_triggers">Logged triggers</string>
+    <string name="insights_types">Attack types</string>
+    <string name="insights_comparisons">Comparisons</string>
+    <string name="insights_vet_note">Correlation is not causation: discuss it with your vet.</string>
+    <string name="a11y_insights_bars">Attacks per month. %1$s</string>
+
+    <!-- Breathing -->
+    <string name="range_week">7 days</string>
+    <string name="range_month">30 days</string>
+    <string name="range_all">All</string>
+    <string name="trend_up">rising</string>
+    <string name="trend_down">falling</string>
+    <string name="trend_stable">stable</string>
+    <string name="breath_rate">Breathing rate</string>
+    <string name="breath_none_yet">No measurements yet</string>
+    <string name="bpm_unit">breaths/min</string>
+    <string name="bpm_value">%1$s breaths/min</string>
+    <string name="bpm_value_estimated">%1$s breaths/min (confirmed estimate)</string>
+    <string name="a11y_breath_rate">Latest breathing rate: %1$s breaths per minute, %2$s</string>
+    <string name="breath_over_threshold">Latest measurement %1$s breaths/min, above the threshold set with the vet (%2$d).</string>
+    <string name="breath_no_animal_body">Add a pet to track its breathing.</string>
+    <string name="breath_night_mode">Night mode</string>
+    <string name="breath_auto">Auto count</string>
+    <string name="breath_trend">Trend</string>
+    <string name="breath_none_period">No measurements in this period.</string>
+    <plurals name="breath_stats">
+        <item quantity="one">Average %1$s · max %2$s · %3$d measurement</item>
+        <item quantity="other">Average %1$s · max %2$s · %3$d measurements</item>
+    </plurals>
+    <string name="breath_legend">— moving average · ┄ vet threshold · ● attacks</string>
+    <string name="breath_legend_pollen">— moving average · ┄ vet threshold · ● attacks · background: pollen (%1$s)</string>
+    <string name="breath_hide_pollen">Hide pollen</string>
+    <string name="breath_show_pollen">Show pollen</string>
+    <string name="breath_measures">Measurements</string>
+    <string name="breath_delete">Delete the %1$s breaths/min measurement from %2$s</string>
+
+    <!-- Breathing counter -->
+    <string name="a11y_breath_tap">Tap for each breath</string>
+    <string name="breath_tap_hint">Tap at each breath in</string>
+    <string name="breath_live_unit">breaths/min (estimate)</string>
+    <plurals name="breath_count_unit">
+        <item quantity="one">breath</item>
+        <item quantity="other">breaths</item>
+    </plurals>
+    <plurals name="a11y_breath_live">
+        <item quantity="one">%1$d breath, about %2$s per minute</item>
+        <item quantity="other">%1$d breaths, about %2$s per minute</item>
+    </plurals>
+    <plurals name="a11y_breath_count">
+        <item quantity="one">%1$d breath</item>
+        <item quantity="other">%1$d breaths</item>
+    </plurals>
+    <string name="breath_day_mode">Day mode</string>
+    <string name="breath_count_note">Count at rest or during sleep; one breath = one rise of the flank.</string>
+    <string name="a11y_breath_result">Result: %1$s breaths per minute</string>
+    <plurals name="breath_result_detail">
+        <item quantity="one">breaths / min · %1$d in %2$d s</item>
+        <item quantity="other">breaths / min · %1$d in %2$d s</item>
+    </plurals>
+    <string name="breath_over_threshold_short">Above the threshold set with the vet (%1$d).</string>
+    <string name="breath_restart">Start over</string>
+
+    <!-- Auto count -->
+    <string name="auto_title">Auto count (experimental)</string>
+    <string name="auto_intro">Film your sleeping pet for 20 to 30 s, holding the phone still. Choose the video, then draw a rectangle over the flank.</string>
+    <string name="auto_pick">Choose a video</string>
+    <string name="a11y_auto_zone">Video frame: drag to draw the flank area</string>
+    <string name="auto_analyze">Analyse movement</string>
+    <string name="auto_not_detected">No rhythm detected: try a larger area on the flank, or a steadier video.</string>
+    <string name="auto_estimate">Estimate to confirm</string>
+    <string name="a11y_auto_estimate">About %1$s breaths per minute</string>
+    <string name="auto_estimate_detail">breaths / min over %1$d s</string>
+    <string name="a11y_auto_signal">Curve of the movement detected on the flank</string>
+    <string name="auto_confirm">Confirm and save</string>
+    <string name="auto_recount">Recount by hand</string>
+    <string name="auto_vet_note">Experimental estimate: always check with a manual count.</string>
+
+    <!-- Shared household -->
+    <string name="push_type_dose">Dose given</string>
+    <string name="push_type_dose_desc">When a member marks a dose (the reminder is cancelled)</string>
+    <string name="push_type_breath">Breathing alert</string>
+    <string name="push_type_breath_desc">Rate above the threshold set with the vet</string>
+    <string name="push_type_crisis">Attack logged</string>
+    <string name="push_type_crisis_desc">When a member logs an attack</string>
+    <string name="push_type_stock">Low stock</string>
+    <string name="push_type_stock_desc">When a medication is running out</string>
+    <string name="push_type_late">Late dose</string>
+    <string name="push_type_late_desc">When a dose is not marked after the set delay</string>
+    <string name="household_bad_code">Unreadable invitation code.</string>
+    <string name="household_share_title">Share with loved ones</string>
+    <string name="household_solo_title">You are in solo mode</string>
+    <string name="household_solo_body">A household brings 2 to 6 people (partner, family, pet sitter) together around the same pets: you see who gave what, and double doses are avoided. Everything is encrypted on the phone; the household key only travels through the QR code.</string>
+    <string name="household_your_name">Your first name (visible to members)</string>
+    <string name="household_create_title">Create a household</string>
+    <string name="household_create_body">Your current data will be encrypted and sent to the new household.</string>
+    <string name="household_create">Create the household</string>
+    <string name="household_join_title">Join a household</string>
+    <string name="household_scan">Scan</string>
+    <string name="household_enter_code">Enter the code</string>
+    <string name="household_server">Server (advanced)</string>
+    <string name="household_you">You: %1$s</string>
+    <string name="household_you_creator">You: %1$s · household creator</string>
+    <string name="household_last_sync">Last sync: %1$s</string>
+    <string name="household_never_synced">Not synced yet</string>
+    <plurals name="household_pending">
+        <item quantity="one">%d change waiting to be sent</item>
+        <item quantity="other">%d changes waiting to be sent</item>
+    </plurals>
+    <string name="household_sync">Sync</string>
+    <string name="household_invite">Invite</string>
+    <string name="household_members">Members (%1$d/%2$d)</string>
+    <string name="household_member_you">%1$s (you)</string>
+    <string name="household_member_since">Since %1$s</string>
+    <string name="household_creator">Creator</string>
+    <string name="household_remove_named">Remove %1$s</string>
+    <string name="household_notifications">Household notifications</string>
+    <string name="household_storage">Media storage</string>
+    <string name="household_quota">%1$s used of %2$s (200 MB max per file)</string>
+    <string name="household_quota_unknown">Quota unknown (sync first)</string>
+    <string name="size_gb">%1$s GB</string>
+    <string name="size_mb">%1$s MB</string>
+    <string name="household_leave_button">Leave the household (keep a local copy)</string>
+    <string name="household_scan_title">Scan the QR code shown by a member</string>
+    <string name="household_code_title">Invitation code</string>
+    <string name="household_code_hint">XXXX-XXXX-…</string>
+    <string name="household_join">Join</string>
+    <string name="household_invitation_title">Invitation (valid 15 min, single use)</string>
+    <string name="household_qr">Invitation QR code</string>
+    <string name="household_backup_code">Backup code</string>
+    <string name="household_backup_code_warning">This code contains the household key: only share it with the invited person.</string>
+    <string name="household_remove_q">Remove %1$s?</string>
+    <string name="household_remove_body">%1$s will no longer have access to the household. A new key is generated and sent to the other members.</string>
+    <string name="household_leave_q">Leave the household?</string>
+    <string name="household_leave_body">You go back to solo mode with a full copy of the data and media on this phone.</string>
+    <string name="household_leave">Leave</string>
+
+    <!-- Onboarding -->
+    <string name="action_continue">Continue</string>
+    <string name="a11y_page">Page %1$d of %2$d</string>
+    <string name="onboarding_animal">Your companion</string>
+    <string name="onboarding_intro">Your pet\'s care log: treatments, breathing, filmed attacks, health records and a report for the vet.</string>
+    <string name="onboarding_intro_local">Everything stays on your phone. Sharing with your loved ones is optional.</string>
+    <string name="onboarding_start">Get started</string>
+    <string name="onboarding_mode_title">How will you use Patoune?</string>
+    <string name="onboarding_mode_body">You can change this at any time in the settings.</string>
+    <string name="onboarding_solo_body">Everything stays on this phone, with no account and no network.</string>
+    <string name="onboarding_create_body">Share with your partner, family or pet sitter (2 to 6 people), end-to-end encrypted.</string>
+    <string name="onboarding_join_body">Scan a member\'s QR code: their pets arrive automatically, nothing to re-enter.</string>
+    <string name="onboarding_finish">Finish</string>
+    <string name="onboarding_finish_without">Finish without allowing</string>
+    <string name="onboarding_later">Later</string>
+
+    <!-- Media -->
+    <string name="action_share">Share</string>
+    <string name="media_pending">Waiting…</string>
+    <string name="media_video">Video</string>
+    <string name="media_kind_photo">Photo</string>
+    <string name="media_kind_pdf">PDF document</string>
+    <string name="a11y_open_media">Open: %1$s from %2$s</string>
+    <string name="media_filter_photos">Photos</string>
+    <string name="media_filter_videos">Videos</string>
+    <string name="media_empty">No media yet</string>
+    <string name="media_empty_body">Photos and videos of attacks, visits and observations will appear here.</string>
+    <string name="media_syncing">Media syncing…</string>
+    <string name="a11y_pdf_page">Page %1$d of %2$d</string>
+
+    <!-- Report and air quality (screens) -->
+    <string name="report_title">Report for the vet</string>
+    <string name="range_3_months">3 months</string>
+    <string name="report_from">From</string>
+    <string name="report_to">To</string>
+    <string name="report_generate">Generate the PDF</string>
+    <string name="report_contents">Profile, treatments and adherence, breathing curve, attacks with thumbnails, weight, observations.</string>
+    <string name="air_title">Pollen and air quality</string>
+    <string name="air_city">City: %1$s</string>
+    <string name="air_no_city">none</string>
+    <string name="air_search_city">Search for a city</string>
+    <string name="air_search">Search</string>
+    <string name="air_search_failed">Search failed (offline?)</string>
+    <string name="air_explain">Data is fetched once a day and overlaid on the attack and breathing timeline.</string>
+    <plurals name="air_days_fetched">
+        <item quantity="one">%d day fetched.</item>
+        <item quantity="other">%d days fetched.</item>
+    </plurals>
+    <string name="air_fetch_failed">Could not fetch data: %1$s</string>
+    <string name="air_day_values">%1$s (grains/m³)</string>
+    <string name="air_aqi">AQI %1$d</string>
+    <string name="air_grass">grass %1$d</string>
+    <string name="air_birch">birch %1$d</string>
+    <string name="air_alder">alder %1$d</string>
+    <string name="air_mugwort">mugwort %1$d</string>
+    <string name="air_ragweed">ragweed %1$d</string>
+    <string name="air_olive">olive %1$d</string>
+    <string name="air_source">Source: Open-Meteo.com, CAMS data (Copernicus Atmosphere Monitoring Service), CC BY 4.0 licence.</string>
+
+    <!-- Reminders and notifications -->
+    <string name="alarm_late">Late</string>
+    <string name="alarm_time">It\'s time</string>
+    <string name="alarm_for">for %1$s</string>
+    <string name="alarm_double">Already given at %1$s (%2$s). Record another dose?</string>
+    <string name="alarm_double_by">Already given at %1$s by %2$s (%3$s). Record another dose?</string>
+    <string name="reminder_snooze">Snooze 15 min</string>
+    <string name="reminder_title">%1$s for %2$s</string>
+    <string name="reminder_title_late">Late: %1$s for %2$s</string>
+    <string name="reminder_text">%1$s · due at %2$s</string>
+    <string name="reminder_text_late">%1$s · due at %2$s · not marked yet</string>
+    <string name="push_late_title">Late: %1$s</string>
+    <string name="push_late_body">For %1$s, due at %2$s, not marked yet.</string>
+    <string name="notif_double_body">%1$s was already marked at %2$s. Confirm another dose?</string>
+    <string name="notif_double_body_by">%1$s was already marked at %2$s by %3$s. Confirm another dose?</string>
+    <string name="notif_confirm_anyway">Confirm anyway</string>
+    <string name="channel_reminders">Treatment reminders</string>
+    <string name="channel_reminders_desc">Medications to give</string>
+    <string name="channel_alarm">Alarm reminders</string>
+    <string name="channel_alarm_desc">Alarm-style treatments: alarm sound and full screen</string>
+    <string name="channel_alerts">Breathing alerts</string>
+    <string name="channel_stock">Stock and care reminders</string>
+    <string name="channel_household_desc">Doses and attacks logged by other members</string>
+    <string name="notif_renew_title">Prescription: %1$s</string>
+    <plurals name="notif_renew_days">
+        <item quantity="one">About %d day of treatment left. Remember to renew the prescription.</item>
+        <item quantity="other">About %d days of treatment left. Remember to renew the prescription.</item>
+    </plurals>
+    <string name="notif_renew_soon">Renewal date coming up.</string>
+    <string name="notif_care_title">%1$s reminder: %2$s</string>
+    <string name="notif_care_body">%1$s due on %2$s.</string>
+    <string name="notif_visit_tomorrow">Vet visit tomorrow</string>
+    <string name="notif_breath_title">High breathing rate: %1$s</string>
+    <string name="notif_breath_body">%1$s breaths/min (threshold set with the vet: %2$d). Count again when calm and contact your vet if needed.</string>
+    <string name="notif_stock_title">Low stock: %1$s</string>
+    <string name="notif_stock_body">%1$s left. Remember to restock.</string>
+    <string name="push_stock_body">%1$s left.</string>
+    <string name="push_dose_title">%1$s given</string>
+    <string name="push_dose_body">For %1$s at %2$s</string>
+
+    <!-- Widgets -->
+    <string name="widget_given_by">Given by %1$s</string>
+    <string name="widget_at">At %1$s</string>
+    <string name="widget_bpm">%1$s breaths/min %2$s</string>
+    <string name="widget_no_measure">No measurement</string>
+    <string name="widget_double">%1$s was already marked at %2$s. Open Patoune to confirm another dose.</string>
+    <string name="widget_double_by">%1$s was already marked at %2$s by %3$s. Open Patoune to confirm another dose.</string>
+
+    <!-- Update -->
+    <string name="update_available">Patoune %1$s is available</string>
+    <string name="update_default_changelog">Improvements and fixes.</string>
+    <string name="update_progress">%1$d%%</string>
+    <string name="update_open_vitrine">Open in Vitrine</string>
+    <string name="update_download_failed">Download failed: %1$s</string>
+    <string name="update_download_here">Download here</string>
+    <string name="update_download_install">Download and install</string>
+
+    <!-- Camera -->
+    <string name="camera_permission">Allow the camera to record videos or take photos.</string>
+    <string name="a11y_camera_recording">Recording, %1$s</string>
+    <string name="camera_compressing">Compressing to 720p…</string>
+    <string name="camera_saving">Saving…</string>
+    <string name="camera_take_photo">Take the photo</string>
+    <string name="camera_start">Start recording</string>
+    <string name="camera_stop">Stop recording</string>
+    <string name="camera_switch">Switch camera</string>
+    <string name="notif_removed_title">Household left</string>
+    <string name="notif_removed_body">You are no longer part of the household. Patoune is back in solo mode with all your data.</string>
+
+    <!-- PDF report -->
+    <string name="pdf_footer">Patoune · tracking aid, not medical advice · page %1$d</string>
+    <string name="pdf_title">Care report: %1$s</string>
+    <string name="pdf_period">From %1$s to %2$s · generated on %3$s</string>
+    <string name="pdf_treatments">Treatments and adherence</string>
+    <string name="pdf_no_treatment">No treatments.</string>
+    <plurals name="pdf_med_as_needed">
+        <item quantity="one">%1$s (%2$s, as needed): %3$d dose</item>
+        <item quantity="other">%1$s (%2$s, as needed): %3$d doses</item>
+    </plurals>
+    <plurals name="pdf_med_fixed">
+        <item quantity="one">%1$s (%2$s, %3$s): %4$d / %5$d dose</item>
+        <item quantity="other">%1$s (%2$s, %3$s): %4$d / %5$d doses</item>
+    </plurals>
+    <string name="pdf_adherence">adherence %1$d%%</string>
+    <plurals name="pdf_skipped">
+        <item quantity="one">%d skipped</item>
+        <item quantity="other">%d skipped</item>
+    </plurals>
+    <string name="pdf_bullet">• %1$s</string>
+    <string name="pdf_changes">Changes during the period:</string>
+    <string name="pdf_change_line">• %1$s · %2$s: %3$s</string>
+    <string name="pdf_deleted_treatment">Deleted treatment</string>
+    <string name="pdf_no_breath">No measurements during the period.</string>
+    <plurals name="pdf_breath_stats">
+        <item quantity="one">%1$d measurement · average %2$s · min %3$s · max %4$s breaths/min</item>
+        <item quantity="other">%1$d measurements · average %2$s · min %3$s · max %4$s breaths/min</item>
+    </plurals>
+    <plurals name="pdf_over_threshold">
+        <item quantity="one">%d above the threshold</item>
+        <item quantity="other">%d above the threshold</item>
+    </plurals>
+    <string name="pdf_breath_legend">Line: moving average · dashes: vet threshold · red dots: attacks · green background: pollen (if a city is set).</string>
+    <string name="pdf_crises">Attacks and coughing (%1$d)</string>
+    <string name="pdf_intensity">intensity %1$d/5</string>
+    <string name="pdf_rescue">Rescue treatment: %1$s</string>
+    <string name="pdf_triggers">Possible triggers: %1$s</string>
+    <string name="pdf_weight">Weight curve (6 months)</string>
+    <string name="pdf_per_month">Attacks per month: %1$s</string>
+    <string name="pdf_noted_triggers">Logged triggers: %1$s</string>
+    <string name="pdf_crisis_types">Attack types: %1$s</string>
+    <string name="pdf_insights_note">Correlation is not causation: discuss it with the vet. Percentages: share of attacks where the item was logged.</string>
+    <string name="pdf_no_observation">No observations.</string>
+    <string name="pdf_obs_count">%1$s ×%2$d</string>
+    <string name="pdf_air_source">Pollen and air quality: Open-Meteo.com (CAMS / Copernicus data), city: %1$s.</string>
+    <string name="pdf_disclaimer">This document is a tracking aid written by the owner and is not medical advice.</string>
+
+    <!-- Shortcuts, widgets, tile -->
+    <string name="shortcut_emergency">Emergency sheet</string>
+    <string name="shortcut_breath">Count breaths</string>
+    <string name="shortcut_crisis">Attack now</string>
+    <string name="widget_description">Next medication, latest breathing rate, quick count</string>
+    <string name="tile_breath">Breaths</string>
+    <string name="crisis_widget_label">Attack now</string>
+    <string name="crisis_widget_description">One tap to film an attack and timestamp it</string>
+</resources>

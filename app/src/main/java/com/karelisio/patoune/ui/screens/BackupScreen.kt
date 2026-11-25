@@ -1,5 +1,7 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -37,6 +40,7 @@ import java.time.LocalDate
 @Composable
 fun BackupScreen() {
     val ctx = LocalContext.current
+    val res = LocalResources.current
     val c = ctx.container
     val scope = rememberCoroutineScope()
     var pwd by remember { mutableStateOf("") }
@@ -51,8 +55,8 @@ fun BackupScreen() {
         scope.launch {
             message = runCatching {
                 ctx.contentResolver.openOutputStream(uri)!!.use { c.backup.export(it, pwd.toCharArray()) }
-                "Sauvegarde créée. Gardez le mot de passe : sans lui, elle est illisible."
-            }.getOrElse { "Échec : ${it.message}" }
+                res.getString(R.string.backup_done)
+            }.getOrElse { res.getString(R.string.error_failed, it.message ?: "") }
             busy = false
         }
     }
@@ -64,26 +68,31 @@ fun BackupScreen() {
                 val r = ctx.contentResolver.openInputStream(uri)!!.use { c.backup.import(it, importPwd.toCharArray()) }
                 c.reminders.rescheduleAll()
                 c.hooks.onImported()
-                "Import terminé : ${r.rows} champ(s) fusionné(s), ${r.media} média(s)."
-            }.getOrElse { if (it is WrongPassword) "Mot de passe incorrect." else "Échec : ${it.message}" }
+                res.getString(
+                    R.string.backup_imported,
+                    res.getQuantityString(R.plurals.backup_fields, r.rows, r.rows),
+                    res.getQuantityString(R.plurals.backup_media, r.media, r.media),
+                )
+            }.getOrElse { if (it is WrongPassword) res.getString(R.string.backup_wrong_password) else res.getString(R.string.error_failed, it.message ?: "") }
             busy = false
         }
     }
 
-    Scaffold(topBar = { BackTopBar("Sauvegarde") }) { pad ->
+    Scaffold(topBar = { BackTopBar(stringResource(R.string.backup_short)) }) { pad ->
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(16.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionCard {
-                Text("Exporter", style = MaterialTheme.typography.titleLarge)
-                Text("Toutes les données et les médias, chiffrés avec votre mot de passe (.zip).", style = MaterialTheme.typography.bodyMedium)
-                PasswordField(pwd, { pwd = it }, "Mot de passe (8 caractères min.)")
-                PasswordField(pwd2, { pwd2 = it }, "Confirmer")
-                Button(onClick = { exporter.launch("patoune-${LocalDate.now()}.zip") }, enabled = !busy && pwd.length >= 8 && pwd == pwd2, modifier = Modifier.fillMaxWidth()) { Text("Exporter") }
+                Text(stringResource(R.string.backup_export), style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.backup_export_body), style = MaterialTheme.typography.bodyMedium)
+                PasswordField(pwd, { pwd = it }, stringResource(R.string.backup_password))
+                PasswordField(pwd2, { pwd2 = it }, stringResource(R.string.backup_confirm))
+                Button(onClick = { exporter.launch("patoune-${LocalDate.now()}.zip") }, enabled = !busy && pwd.length >= 8 && pwd == pwd2, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.backup_export)) }
             }
             SectionCard {
-                Text("Importer", style = MaterialTheme.typography.titleLarge)
-                Text("Fusionne une sauvegarde avec les données actuelles (rien n'est effacé).", style = MaterialTheme.typography.bodyMedium)
-                PasswordField(importPwd, { importPwd = it }, "Mot de passe de la sauvegarde")
-                OutlinedButton(onClick = { importer.launch(arrayOf("application/zip", "application/octet-stream")) }, enabled = !busy && importPwd.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Choisir le fichier") }
+                Text(stringResource(R.string.backup_import), style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.backup_import_body), style = MaterialTheme.typography.bodyMedium)
+                PasswordField(importPwd, { importPwd = it }, stringResource(R.string.backup_import_password))
+                OutlinedButton(onClick = { importer.launch(arrayOf("application/zip", "application/octet-stream")) }, enabled = !busy && importPwd.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.backup_pick_file)) }
+
             }
             if (busy) CircularWavyProgressIndicator()
             message?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }

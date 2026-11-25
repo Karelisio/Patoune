@@ -53,6 +53,7 @@ class Store(
         Adapter("weight", WeightEntry::class, WeightEntry.serializer(), db.weights()),
         Adapter("document", HealthDocument::class, HealthDocument.serializer(), db.documents()),
         Adapter("member", Member::class, Member.serializer(), db.members()),
+        Adapter("medchange", MedicationChange::class, MedicationChange.serializer(), db.medicationChanges()),
     )
     private val byName = adapters.associateBy { it.name }
     private val byType = adapters.associateBy { it.type }

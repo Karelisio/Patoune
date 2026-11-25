@@ -1,12 +1,15 @@
 package com.karelisio.patoune.reminders
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -15,6 +18,7 @@ import com.karelisio.patoune.R
 
 object Notif {
     const val CH_REMINDERS = "reminders"
+    const val CH_ALARM = "reminders_alarm"
     const val CH_ALERTS = "alerts"
     const val CH_STOCK = "stock"
     const val CH_HOUSEHOLD = "household"
@@ -22,10 +26,19 @@ object Notif {
     fun createChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannels(listOf(
-            NotificationChannel(CH_REMINDERS, "Rappels de traitement", NotificationManager.IMPORTANCE_HIGH).apply { description = "Médicaments à donner" },
-            NotificationChannel(CH_ALERTS, "Alertes respiratoires", NotificationManager.IMPORTANCE_HIGH).apply { description = "Fréquence au-dessus du seuil fixé avec le véto" },
-            NotificationChannel(CH_STOCK, "Stock et rappels de soins", NotificationManager.IMPORTANCE_DEFAULT),
-            NotificationChannel(CH_HOUSEHOLD, "Foyer partagé", NotificationManager.IMPORTANCE_DEFAULT).apply { description = "Prises et crises enregistrées par les autres membres" },
+            NotificationChannel(CH_REMINDERS, context.getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_HIGH).apply { description = context.getString(R.string.channel_reminders_desc) },
+            NotificationChannel(CH_ALARM, context.getString(R.string.channel_alarm), NotificationManager.IMPORTANCE_HIGH).apply {
+                description = context.getString(R.string.channel_alarm_desc)
+                setSound(
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                    AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
+                )
+                enableVibration(true)
+            },
+            NotificationChannel(CH_ALERTS, context.getString(R.string.channel_alerts), NotificationManager.IMPORTANCE_HIGH).apply { description = context.getString(R.string.push_type_breath_desc) },
+            NotificationChannel(CH_STOCK, context.getString(R.string.channel_stock), NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel(CH_HOUSEHOLD, context.getString(R.string.settings_shared), NotificationManager.IMPORTANCE_DEFAULT).apply { description = context.getString(R.string.channel_household_desc) },
+
         ))
     }
 
@@ -49,9 +62,11 @@ object Notif {
             .setContentIntent(openApp(context))
             .setAutoCancel(true)
 
-    fun post(context: Context, id: Int, n: NotificationCompat.Builder) {
+    /** [insistent] : la sonnerie se répète jusqu'à une action (rappels type réveil). */
+    fun post(context: Context, id: Int, n: NotificationCompat.Builder, insistent: Boolean = false) {
         if (!canPost(context)) return
-        try { NotificationManagerCompat.from(context).notify(id, n.build()) } catch (_: SecurityException) {}
+        val notification = n.build().apply { if (insistent) flags = flags or Notification.FLAG_INSISTENT }
+        try { NotificationManagerCompat.from(context).notify(id, notification) } catch (_: SecurityException) {}
     }
 
     fun cancel(context: Context, id: Int) = NotificationManagerCompat.from(context).cancel(id)

@@ -22,7 +22,8 @@ class TestDevice(val deviceId: String, var author: String = "", server: FakeServ
     val store = Store(db, deviceId, author = { settings.current().memberName.ifEmpty { author } })
     val mediaDir: File = File(ctx.cacheDir, "media-$deviceId-${UUID.randomUUID()}").apply { mkdirs() }
     val sessions = SessionStore(settings, MemoryBox())
+    val progressDir: File = File(ctx.cacheDir, "upload-progress-$deviceId-${UUID.randomUUID()}")
     private val api = server?.client { runBlocking { sessions.load()?.token } }
-    val sync: SyncEngine? = api?.let { SyncEngine(it, store, db, sessions, settings, { mediaDir }) }
+    val sync: SyncEngine? = api?.let { SyncEngine(it, store, db, sessions, settings, { mediaDir }, { progressDir }) }
     val household: HouseholdManager? = api?.let { HouseholdManager(it, store, db, sessions, settings, sync!!) }
 }
