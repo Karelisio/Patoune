@@ -41,6 +41,8 @@ import com.karelisio.patoune.ui.screens.CrisisEditScreen
 import com.karelisio.patoune.ui.screens.JournalScreen
 import com.karelisio.patoune.ui.screens.MediaViewerScreen
 import com.karelisio.patoune.ui.screens.AnimalEditScreen
+import com.karelisio.patoune.ui.screens.EmergencyScreen
+import com.karelisio.patoune.ui.screens.HealthScreen
 import com.karelisio.patoune.ui.screens.BreathCounterScreen
 import com.karelisio.patoune.ui.screens.BreathScreen
 import com.karelisio.patoune.ui.screens.HomeScreen
@@ -138,5 +140,6 @@ private fun NavGraphBuilder.graph(vm: MainViewModel, settings: AppSettings) {
         val animal = vm.selected.collectAsStateWithLifecycle().value
         if (animal != null) CameraScreen(r.video, animal.id, AttachType.valueOf(r.attachType), r.attachId, r.autoStart) { nav.popBackStack() }
     }
-    composable<Routes.Health> { HomeScreen(vm) }
+    composable<Routes.Health> { WithAnim(this) { HealthScreen(vm) } }
+    composable<Routes.Emergency> { EmergencyScreen(vm) }
 }

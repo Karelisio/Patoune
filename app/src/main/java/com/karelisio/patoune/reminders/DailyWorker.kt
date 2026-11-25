@@ -24,6 +24,21 @@ class DailyWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                     days?.let { "Environ $it jour(s) de traitement restant(s). Pensez à renouveler l'ordonnance." } ?: "Date de renouvellement proche.")
             }
         }
+        for (ci in c.db.care().withDue()) {
+            val due = Dates.parse(ci.nextDue) ?: continue
+            val days = java.time.temporal.ChronoUnit.DAYS.between(today, due)
+            if (days in 0..7 && (days == 7L || days <= 1L)) {
+                val animal = c.db.animals().byId(ci.animalId)?.name ?: ""
+                Notif.simple(applicationContext, Notif.CH_STOCK, ("care" + ci.id).hashCode(), "Rappel ${ci.kind.label.lowercase()} : $animal",
+                    "${ci.name} prévu le ${Dates.fmtDay(ci.nextDue)}.")
+            }
+        }
+        for (v in c.db.visits().allRows().filter { !it.deleted && it.nextVisit != null }) {
+            val due = Dates.parse(v.nextVisit) ?: continue
+            if (java.time.temporal.ChronoUnit.DAYS.between(today, due) == 1L) {
+                Notif.simple(applicationContext, Notif.CH_STOCK, ("visit" + v.id).hashCode(), "Visite véto demain", v.reason.ifBlank { "Prochaine visite" })
+            }
+        }
         c.hooks.onDaily()
         return Result.success()
     }
