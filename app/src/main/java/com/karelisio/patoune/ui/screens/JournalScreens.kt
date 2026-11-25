@@ -127,7 +127,10 @@ private fun CrisisList(animalId: String) {
     val shared = c.sharedFlag
     val nav = LocalNav.current
     val crises by remember(animalId) { c.db.crises().observeFor(animalId) }.collectAsState(emptyList())
+    val breaths by remember(animalId) { c.db.breaths().observeFor(animalId) }.collectAsState(emptyList())
+    val air by remember { c.db.air().observeAll() }.collectAsState(emptyList())
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (crises.isNotEmpty()) item(key = "insights") { InsightsCard(crises, breaths, air) }
         if (crises.isEmpty()) item { EmptyState(Icons.Rounded.Sick, "Aucune crise notée", "Utilisez « Crise en cours » sur l'accueil pour filmer et horodater en un tap.") }
         items(crises, key = { it.id }) { cr ->
             val media by remember(cr.id) { c.db.media().observeAttached(cr.id) }.collectAsState(emptyList())

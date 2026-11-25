@@ -21,6 +21,7 @@ import com.karelisio.patoune.data.MediaKind
 import com.karelisio.patoune.domain.Adherence
 import com.karelisio.patoune.domain.Breath
 import com.karelisio.patoune.domain.Dates
+import com.karelisio.patoune.domain.Insights
 import com.karelisio.patoune.domain.ReminderPlanner
 import com.karelisio.patoune.media.VideoCompressor
 import kotlinx.coroutines.Dispatchers
@@ -151,6 +152,16 @@ class ReportGenerator(private val context: Context, private val c: AppContainer)
             w.title("Courbe de poids (6 mois)")
             chart(w, wPeriod.map { Dates.startOfDay(LocalDate.parse(it.date)) to it.kg }, Dates.startOfDay(LocalDate.parse(wPeriod.first().date)), Dates.startOfDay(LocalDate.parse(wPeriod.last().date)), null, emptyList(), emptyList(), sage)
         }
+
+        // Analyse des déclencheurs sur la période (mêmes chiffres que la carte « Analyse » du journal).
+        val ins = Insights.summarize(crises, breaths, c.db.air().between(from.toString(), to.toString()), zone, from, to)
+        w.title("Analyse")
+        w.para("Crises par mois : " + ins.months.joinToString(", ") { "${Insights.fmtMonth(it.month)} : ${it.count}" })
+        if (ins.triggers.isNotEmpty()) w.para("Déclencheurs notés : ${Insights.sharesText(ins.triggers)}")
+        if (ins.types.isNotEmpty()) w.para("Types de crise : ${Insights.sharesText(ins.types)}")
+        listOf(Insights.pollenSentence(ins.pollen), Insights.aqiSentence(ins.aqi), Insights.breathSentence(ins.breathByPollen), Insights.dayPartSentence(ins))
+            .forEach { w.para("• $it") }
+        w.para("Corrélation n'est pas causalité : à discuter avec le véto. Pourcentages : part des crises où l'élément est noté.", w.muted)
 
         // Observations.
         val obs = c.db.observations().between(animal.id, t0, t1)
