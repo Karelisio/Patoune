@@ -12,4 +12,6 @@ open class Hooks(private val c: AppContainer) {
     open suspend fun onPush(type: PushType, title: String, body: String, refId: String?) {}
     open suspend fun onDataChanged() {}
     open suspend fun onDaily() {}
+    /** Après un import de sauvegarde (en partagé : renvoyer les données au foyer). */
+    open suspend fun onImported() { onDataChanged() }
 }

@@ -41,6 +41,9 @@ import com.karelisio.patoune.ui.screens.CrisisEditScreen
 import com.karelisio.patoune.ui.screens.JournalScreen
 import com.karelisio.patoune.ui.screens.MediaViewerScreen
 import com.karelisio.patoune.ui.screens.AnimalEditScreen
+import com.karelisio.patoune.ui.screens.BackupScreen
+import com.karelisio.patoune.ui.screens.OnboardingScreen
+import com.karelisio.patoune.ui.screens.PermissionsScreen
 import com.karelisio.patoune.ui.screens.EmergencyScreen
 import com.karelisio.patoune.ui.screens.HealthScreen
 import com.karelisio.patoune.ui.screens.BreathCounterScreen
@@ -124,7 +127,11 @@ fun AppNav(vm: MainViewModel, settings: AppSettings, launchAction: String?, onAc
 private fun NavGraphBuilder.graph(vm: MainViewModel, settings: AppSettings) {
     composable<Routes.Home> { WithAnim(this) { HomeScreen(vm) } }
     composable<Routes.Settings> { SettingsScreen(vm) }
-    composable<Routes.Onboarding> { HomeScreen(vm) }
+    composable<Routes.Onboarding> { OnboardingScreen(vm) }
+    composable<Routes.Permissions> { PermissionsScreen() }
+    composable<Routes.Backup> { BackupScreen() }
+    composable<Routes.Household> { SettingsScreen(vm) }
+    composable<Routes.Report> { SettingsScreen(vm) }
     composable<Routes.AnimalEdit> { AnimalEditScreen(vm, it.toRoute<Routes.AnimalEdit>().id) }
     composable<Routes.Treatments> { WithAnim(this) { TreatmentsScreen(vm) } }
     composable<Routes.MedicationEdit> { MedicationEditScreen(vm, it.toRoute<Routes.MedicationEdit>().id) }

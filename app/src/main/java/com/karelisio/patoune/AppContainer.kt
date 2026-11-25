@@ -6,6 +6,7 @@ import com.karelisio.patoune.data.Settings
 import com.karelisio.patoune.data.Store
 import com.karelisio.patoune.reminders.Doses
 import com.karelisio.patoune.reminders.ReminderScheduler
+import com.karelisio.patoune.backup.Backup
 import com.karelisio.patoune.media.MediaRepo
 import com.karelisio.patoune.update.Updater
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +26,7 @@ class AppContainer(val context: Context) {
     val doses = Doses(this)
     val hooks = Hooks(this)
     val media = MediaRepo(context, store)
+    val backup = Backup(db, store) { media.dir }
 
     private fun onLocalChange() {}
 }
