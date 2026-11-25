@@ -22,6 +22,7 @@ enum class PushType(val label: String, val description: String) {
     BREATH("Alerte respiratoire", "Fréquence au-dessus du seuil fixé avec le véto"),
     CRISIS("Crise enregistrée", "Quand un membre enregistre une crise"),
     STOCK("Stock bas", "Quand un médicament arrive en fin de stock"),
+    LATE("Prise en retard", "Quand une prise n'est pas marquée après le délai prévu"),
 }
 
 data class AppSettings(

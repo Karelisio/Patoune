@@ -19,8 +19,9 @@ package `com.karelisio.patoune`. Worker Cloudflare dans `/worker`. Tout en fran�
 ## Architecture (app/src/main/java/com/karelisio/patoune)
 - `data/` : entités Room (toutes `Syncable` : id UUID, createdBy, updatedAt, deleted), DAO, `Store`, `Settings` (DataStore).
 - `domain/` : HLC, fusion d'événements, crypto (AES-GCM, PBKDF2, ECDH P-256, HKDF), respiration, garde-fou double dose,
-  stock, planification des rappels, observance, détection de pics.
-- `reminders/` : AlarmManager `setExactAndAllowWhileIdle`, actions de notification, `DailyWorker` (ordonnances, soins, pollens).
+  stock, planification des rappels, prise en retard (`LateCheck`), historique des traitements (`MedDiff`), observance, détection de pics.
+- `reminders/` : AlarmManager `setExactAndAllowWhileIdle` (ou `setAlarmClock` + `ReminderAlarmActivity` plein écran en mode réveil),
+  vérif « en retard » (PendingIntent distinct), actions de notification, `DailyWorker` (ordonnances, soins, pollens).
 - `sync/` : `HttpApi`, `SessionStore` (secrets scellés par Android Keystore), `SyncEngine`, `HouseholdManager`, FCM.
 - `media/` (CameraX, Media3 720p, analyse de mouvement), `report/` (PDF), `air/` (Open-Meteo), `backup/`, `widget/` (Glance, tuile).
 - `ui/` : `AppNav` (navigation type-safe), écrans dans `ui/screens`, composants dans `ui/components`.

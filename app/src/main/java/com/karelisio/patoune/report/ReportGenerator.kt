@@ -109,6 +109,16 @@ class ReportGenerator(private val context: Context, private val c: AppContainer)
             }
             w.para("• $line")
         }
+        // Changements de traitement (dose, horaires, dates) sur la période.
+        val changes = c.db.medicationChanges().between(animal.id, t0, t1)
+        if (changes.isNotEmpty()) {
+            val names = c.db.medications().allRows().associate { it.id to it.name }
+            w.para("Changements sur la période :", w.muted, 2f)
+            for (ch in changes) {
+                val what = ch.summary.lines().filter { it.isNotBlank() }.joinToString(" ; ")
+                w.para("• ${Dates.fmtDay(ch.at)} · ${names[ch.medicationId] ?: "Traitement supprimé"} : $what")
+            }
+        }
 
         // Respiration.
         val breaths = c.db.breaths().between(animal.id, t0, t1)

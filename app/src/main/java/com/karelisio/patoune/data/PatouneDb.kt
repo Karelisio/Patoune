@@ -11,14 +11,16 @@ import androidx.room.RoomDatabase
         Animal::class, Medication::class, DoseLog::class, BreathCount::class, Crisis::class,
         MediaItem::class, Observation::class, CareItem::class, VetVisit::class, WeightEntry::class,
         HealthDocument::class, Member::class, SyncEventEntity::class, FieldClock::class, AirDay::class,
+        MedicationChange::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class PatouneDb : RoomDatabase() {
     abstract fun animals(): AnimalDao
     abstract fun medications(): MedicationDao
+    abstract fun medicationChanges(): MedicationChangeDao
     abstract fun doses(): DoseLogDao
     abstract fun breaths(): BreathDao
     abstract fun crises(): CrisisDao
