@@ -78,7 +78,7 @@ fun SettingsScreen(vm: MainViewModel) {
             }
             item { SettingsHeader("Suivi") }
             item { SettingsItem("Rapport pour le véto", "PDF sur une période choisie", Icons.Rounded.PictureAsPdf) { nav.navigate(Routes.Report) } }
-            item { SettingsItem("Pollens et qualité de l'air", st.city ?: "Choisir une ville", Icons.Rounded.Grass) { nav.navigate(Routes.Report) } }
+            item { SettingsItem("Pollens et qualité de l'air", st.city ?: "Choisir une ville", Icons.Rounded.Grass) { nav.navigate(Routes.Air) } }
             item { SettingsHeader("Données") }
             item { SettingsItem("Sauvegarde chiffrée", "Exporter ou importer (.zip avec les médias)", Icons.Rounded.Backup) { nav.navigate(Routes.Backup) } }
             item { SettingsItem("Autorisations", "Notifications, alarmes, caméra, batterie…", Icons.Rounded.Security) { nav.navigate(Routes.Permissions) } }

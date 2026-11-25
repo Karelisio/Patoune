@@ -41,6 +41,8 @@ import com.karelisio.patoune.ui.screens.CrisisEditScreen
 import com.karelisio.patoune.ui.screens.JournalScreen
 import com.karelisio.patoune.ui.screens.MediaViewerScreen
 import com.karelisio.patoune.ui.screens.AnimalEditScreen
+import com.karelisio.patoune.ui.screens.AirScreen
+import com.karelisio.patoune.ui.screens.ReportScreen
 import com.karelisio.patoune.ui.screens.HouseholdScreen
 import com.karelisio.patoune.ui.screens.BackupScreen
 import com.karelisio.patoune.ui.screens.OnboardingScreen
@@ -132,7 +134,8 @@ private fun NavGraphBuilder.graph(vm: MainViewModel, settings: AppSettings) {
     composable<Routes.Permissions> { PermissionsScreen() }
     composable<Routes.Backup> { BackupScreen() }
     composable<Routes.Household> { HouseholdScreen(vm) }
-    composable<Routes.Report> { SettingsScreen(vm) }
+    composable<Routes.Report> { ReportScreen(vm) }
+    composable<Routes.Air> { AirScreen(vm) }
     composable<Routes.AnimalEdit> { AnimalEditScreen(vm, it.toRoute<Routes.AnimalEdit>().id) }
     composable<Routes.Treatments> { WithAnim(this) { TreatmentsScreen(vm) } }
     composable<Routes.MedicationEdit> { MedicationEditScreen(vm, it.toRoute<Routes.MedicationEdit>().id) }

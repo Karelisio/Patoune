@@ -3,7 +3,9 @@ package com.karelisio.patoune
 import android.content.Context
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
+import com.karelisio.patoune.air.AirRepo
 import com.karelisio.patoune.backup.Backup
+import com.karelisio.patoune.report.ReportGenerator
 import com.karelisio.patoune.data.PatouneDb
 import com.karelisio.patoune.data.Settings
 import com.karelisio.patoune.data.Store
@@ -43,6 +45,8 @@ class AppContainer(val context: Context) {
     val media = MediaRepo(context, store)
     val backup = Backup(db, store) { media.dir }
     val widgets = Widgets(context)
+    val air = AirRepo(db.air())
+    val report = ReportGenerator(context, this)
 
     // ---- Mode partagé (aucun appel réseau tant que le foyer n'existe pas) ----
     val sessions = SessionStore(settings, KeystoreBox())

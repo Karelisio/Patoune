@@ -22,6 +22,7 @@ object Routes {
     @Serializable data class MediaViewer(val id: String)
     @Serializable object Gallery
     @Serializable object Report
+    @Serializable object Air
     @Serializable object Household
     @Serializable object Backup
 }

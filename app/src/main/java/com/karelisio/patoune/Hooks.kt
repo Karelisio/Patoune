@@ -35,6 +35,9 @@ open class Hooks(private val c: AppContainer) {
     }
 
     open suspend fun onDaily() {
+        // Pollens du jour (Open-Meteo, pas le backend) : silencieux hors ligne.
+        val s = c.settings.current()
+        if (s.city != null && s.cityLat != null && s.cityLon != null) runCatching { c.air.fetch(s.city, s.cityLat, s.cityLon) }
         if (shared()) SyncWorker.now(c.context)
     }
 
