@@ -56,7 +56,8 @@ object PawShapes {
     val clover: Shape @Composable get() = MaterialShapes.Clover4Leaf.toShape()
     val sunny: Shape @Composable get() = MaterialShapes.Sunny.toShape()
     val soft: Shape @Composable get() = MaterialShapes.SoftBurst.toShape()
-    val pill: Shape @Composable get() = MaterialShapes.Pill.toShape()
+    /** Vraie pilule (stade) : MaterialShapes.Pill se déforme quand on l'étire sur un bouton large. */
+    val pill: Shape @Composable get() = androidx.compose.foundation.shape.RoundedCornerShape(percent = 50)
     val flower: Shape @Composable get() = MaterialShapes.Flower.toShape()
     val gem: Shape @Composable get() = MaterialShapes.Gem.toShape()
 }

@@ -116,7 +116,7 @@ fun JournalScreen(vm: MainViewModel) {
                 }
             }
             val a = animal ?: return@Column
-            HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
+            HorizontalPager(pager, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
                 when (page) {
                     0 -> CrisisList(a.id)
                     1 -> ObservationsContent(a.id, snack)
@@ -133,12 +133,15 @@ private fun CrisisList(animalId: String) {
     val c = ctx.container
     val shared = c.sharedFlag
     val nav = LocalNav.current
-    val crises by remember(animalId) { c.db.crises().observeFor(animalId) }.collectAsState(emptyList())
+    // null = pas encore chargé : on n'affiche pas l'état vide le temps de la lecture (sinon un trou reste en tête de liste).
+    val loaded by remember(animalId) { c.db.crises().observeFor(animalId) }.collectAsState(null)
+    val crises = loaded.orEmpty()
     val breaths by remember(animalId) { c.db.breaths().observeFor(animalId) }.collectAsState(emptyList())
     val air by remember { c.db.air().observeAll() }.collectAsState(emptyList())
+    if (loaded == null) return
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (crises.isNotEmpty()) item(key = "insights") { InsightsCard(crises, breaths, air) }
-        if (crises.isEmpty()) item { EmptyState(Icons.Rounded.Sick, stringResource(R.string.journal_empty), stringResource(R.string.journal_empty_body)) }
+        if (crises.isEmpty()) item(key = "empty") { EmptyState(Icons.Rounded.Sick, stringResource(R.string.journal_empty), stringResource(R.string.journal_empty_body)) }
         items(crises, key = { it.id }) { cr ->
             val media by remember(cr.id) { c.db.media().observeAttached(cr.id) }.collectAsState(emptyList())
             SectionCard(Modifier.cascade(crises.indexOf(cr)).sharedKey("crisis-${cr.id}").clickable { nav.navigate(Routes.CrisisEdit(cr.id)) }) {

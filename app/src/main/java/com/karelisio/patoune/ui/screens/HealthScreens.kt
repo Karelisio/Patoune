@@ -118,7 +118,7 @@ fun HealthScreen(vm: MainViewModel) {
                 tabs.forEachIndexed { i, t -> Tab(pager.currentPage == i, { scope.launch { pager.animateScrollToPage(i) } }, text = { Text(stringResource(t)) }) }
             }
             val a = animal ?: return@Column
-            HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
+            HorizontalPager(pager, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
                 when (page) {
                     0 -> CareList(a.id) { editCare = it }
                     1 -> VisitList(a.id) { editVisit = it }
