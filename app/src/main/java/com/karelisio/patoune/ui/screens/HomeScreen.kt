@@ -45,6 +45,7 @@ fun HomeScreen(vm: MainViewModel) {
     val shared = settings?.shared == true
     val meds by remember(animal?.id) { animal?.let { c.db.medications().observeFor(it.id) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
     val doses by remember(animal?.id) { animal?.let { c.db.doses().observeSince(it.id, System.currentTimeMillis() - 2 * 86_400_000L) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
+    val breaths by remember(animal?.id) { animal?.let { c.db.breaths().observeFor(it.id) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
     var statuses by remember { mutableStateOf(emptyList<MedStatus>()) }
     LaunchedEffect(meds, doses) { statuses = meds.filter { !it.asNeeded }.map { medStatus(c, it) }.sortedBy { it.nextAt ?: Long.MAX_VALUE } }
     val scope = rememberCoroutineScope()
@@ -57,7 +58,7 @@ fun HomeScreen(vm: MainViewModel) {
                 item { Button(onClick = { nav.navigate(Routes.AnimalEdit()) }, Modifier.fillMaxWidth()) { Text("Ajouter un animal") } }
                 return@LazyColumn
             }
-            homeExtras(this, vm)
+            item { animal?.let { a -> BreathSummaryCard(a, breaths) { nav.navigate(Routes.BreathCounter()) } } }
             if (statuses.isNotEmpty()) item { Text("À donner", style = MaterialTheme.typography.titleMedium) }
             items(statuses, key = { it.med.id }) { s -> DueMedCard(s, shared, onGive = { ctrl.give(s.med) }, onOpen = { nav.navigate(Routes.MedicationDetail(s.med.id)) }) }
         }
@@ -73,5 +74,4 @@ fun DueMedCard(s: MedStatus, shared: Boolean, onGive: () -> Unit, onOpen: () -> 
     AnimatedVisibility(visible, exit = shrinkVertically() + fadeOut()) { MedCard(s, shared, onGive, onOpen) }
 }
 
-/** Sections ajoutées par les jalons suivants (respiration, crise…). */
-fun homeExtras(scope: androidx.compose.foundation.lazy.LazyListScope, vm: MainViewModel) {}
+

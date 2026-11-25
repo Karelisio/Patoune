@@ -35,6 +35,8 @@ import com.karelisio.patoune.MainActivity
 import com.karelisio.patoune.data.AppSettings
 import androidx.navigation.toRoute
 import com.karelisio.patoune.ui.screens.AnimalEditScreen
+import com.karelisio.patoune.ui.screens.BreathCounterScreen
+import com.karelisio.patoune.ui.screens.BreathScreen
 import com.karelisio.patoune.ui.screens.HomeScreen
 import com.karelisio.patoune.ui.screens.MedicationDetailScreen
 import com.karelisio.patoune.ui.screens.MedicationEditScreen
@@ -119,7 +121,8 @@ private fun NavGraphBuilder.graph(vm: MainViewModel, settings: AppSettings) {
     composable<Routes.Treatments> { WithAnim(this) { TreatmentsScreen(vm) } }
     composable<Routes.MedicationEdit> { MedicationEditScreen(vm, it.toRoute<Routes.MedicationEdit>().id) }
     composable<Routes.MedicationDetail> { WithAnim(this) { MedicationDetailScreen(vm, it.toRoute<Routes.MedicationDetail>().id) } }
-    composable<Routes.Breath> { HomeScreen(vm) }
+    composable<Routes.Breath> { BreathScreen(vm) }
+    composable<Routes.BreathCounter> { BreathCounterScreen(vm, it.toRoute<Routes.BreathCounter>().night) }
     composable<Routes.Journal> { HomeScreen(vm) }
     composable<Routes.Health> { HomeScreen(vm) }
 }

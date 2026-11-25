@@ -41,16 +41,15 @@ object PeakDetector {
         return result
     }
 
-    /** Rythme estimé (resp/min) pour un signal échantillonné à [fps]. Respirations entre 8 et 120/min. */
+    /** Rythme estimé (resp/min) pour un signal échantillonné à [fps]. Respirations entre 8 et 100/min. */
     fun estimateBpm(signal: DoubleArray, fps: Double): Double? {
         if (signal.size < fps * 5) return null
-        val clean = smooth(detrend(signal, (fps * 3).toInt()), maxOf(1, (fps / 6).toInt()))
-        val minDist = maxOf(1, (fps * 60 / 120).toInt())
+        val clean = smooth(detrend(signal, (fps * 3).toInt()), maxOf(1, (fps * 0.3).toInt()))
+        val minDist = maxOf(1, (fps * 60 / 100).toInt())
         val p = peaks(clean, minDist)
-        if (p.size < 2) return null
-        val intervals = p.zipWithNext { a, b -> (b - a) / fps }.sorted()
-        val median = intervals[intervals.size / 2]
-        val bpm = 60.0 / median
-        return bpm.takeIf { it in 8.0..120.0 }
+        if (p.size < 3) return null
+        val span = (p.last() - p.first()) / fps
+        val bpm = (p.size - 1) * 60.0 / span
+        return bpm.takeIf { it in 8.0..100.0 }
     }
 }
