@@ -65,11 +65,12 @@ val PatouneTypography = Typography(
 /** Style du gros chiffre (compteur, fréquence). */
 val BigNumber = TextStyle(fontSize = 88.sp, fontWeight = FontWeight.Black, letterSpacing = (-3).sp)
 
+/** [dynamicColor] : couleurs du fond d'écran (Android 12+) ; false force la palette pêche/sauge (captures d'écran). */
 @Composable
-fun PatouneTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun PatouneTheme(dark: Boolean = isSystemInDarkTheme(), dynamicColor: Boolean = true, content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     val scheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
         dark -> DarkFallback
         else -> LightFallback
     }

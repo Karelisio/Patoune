@@ -101,9 +101,10 @@ private enum class Phase { READY, COUNTING, DONE }
 /**
  * Compteur de fréquence respiratoire : un tap par respiration.
  * Animation signature « Souffle » : la forme gonfle et se dégonfle à chaque tap, avec des ondes concentriques.
+ * [clock] : horloge murale (ms), remplaçable par une horloge contrôlée dans les tests d'interface.
  */
 @Composable
-fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
+fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean, clock: () -> Long = System::currentTimeMillis) {
     val c = LocalContext.current.container
     val nav = LocalNav.current
     val view = LocalView.current
@@ -139,7 +140,7 @@ fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
 
     LaunchedEffect(phase, ripples.size) {
         while (phase == Phase.COUNTING || ripples.isNotEmpty()) {
-            withFrameMillis { now = System.currentTimeMillis() }
+            withFrameMillis { now = clock() }
             ripples.removeAll { now - it > 1600 }
             if (phase == Phase.COUNTING && now - startAt >= duration * 1000L) phase = Phase.DONE
         }
@@ -153,7 +154,7 @@ fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
     val spin by rememberInfiniteTransition(label = "spin").animateFloat(0f, 360f, infiniteRepeatable(tween(40_000, easing = LinearEasing), RepeatMode.Restart), label = "r")
 
     fun onTap() {
-        val t = System.currentTimeMillis()
+        val t = clock()
         if (phase == Phase.DONE) return
         if (phase == Phase.READY) { phase = Phase.COUNTING; startAt = t; taps.clear() }
         taps += t

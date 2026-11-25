@@ -6,11 +6,13 @@ package `com.karelisio.patoune`. Worker Cloudflare dans `/worker`. Tout en fran�
 ## Commandes
 - Appli : `./gradlew assembleRelease lint testDebugUnitTest` (SDK Android requis ; `local.properties` → `sdk.dir`).
 - Worker : `cd worker && npm ci && npm run typecheck && npm test` (vitest + `@cloudflare/vitest-plugin`/Miniflare).
+- Captures : `./gradlew recordRoborazziDebug` → `app/build/outputs/roborazzi` (non commitées ; artefact CI `captures`).
 - Version : fichier `VERSION` (X.Y.Z) = versionName ; versionCode = `GITHUB_RUN_NUMBER`.
 
 ## Standards
 - Dépendances uniquement dans `gradle/libs.versions.toml`, versions stables. Pas de DI framework : `AppContainer`.
 - Logique pure et testée dans `domain/` (JVM) ; Robolectric pour Room/DataStore (`app/src/test`).
+- Tests Compose sous Robolectric dans `app/src/test/.../ui` : `UiTestApp` (base en mémoire), textes via `R.string`.
 - Toute écriture de données passe par `Store.save/delete` (jamais un DAO directement), sauf champs locaux (`saveLocal`).
 - Respecter « réduire les animations » (`rememberReduceMotion`) ; textes d'aide médicale discrets (`VetNote`).
 - Textes : res/values (fr) + values-en ; jamais de texte en dur (valeurs stockées FR = clés, libellés via `ui/Texts.kt`).
