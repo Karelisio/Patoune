@@ -33,6 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import com.karelisio.patoune.container
+import com.karelisio.patoune.deleteAnimal
 import com.karelisio.patoune.data.Animal
 import com.karelisio.patoune.data.AttachType
 import com.karelisio.patoune.domain.newId
@@ -59,7 +60,8 @@ fun AnimalEditScreen(vm: MainViewModel, id: String?, onSaved: (() -> Unit)? = nu
     }
     val save: () -> Unit = {
         scope.launch {
-            val saved = c.store.save(a.copy(name = a.name.trim().ifEmpty { "Mon animal" }))
+            val order = if (id == null) (c.db.animals().allRows().filter { !it.deleted }.maxOfOrNull { it.sortOrder } ?: -1) + 1 else a.sortOrder
+            val saved = c.store.save(a.copy(name = a.name.trim().ifEmpty { "Mon animal" }, sortOrder = order))
             vm.select(saved.id)
             if (onSaved != null) onSaved() else nav.popBackStack()
         }
@@ -103,7 +105,7 @@ fun AnimalEditScreen(vm: MainViewModel, id: String?, onSaved: (() -> Unit)? = nu
         onDismissRequest = { confirmDelete = false },
         title = { Text("Supprimer ${a.name} ?") },
         text = { Text("Le profil et son suivi ne seront plus affichés.") },
-        confirmButton = { TextButton(onClick = { scope.launch { c.store.delete(a); vm.select(null); nav.popBackStack() } }) { Text("Supprimer") } },
+        confirmButton = { TextButton(onClick = { scope.launch { c.deleteAnimal(a); nav.popBackStack() } }) { Text("Supprimer") } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annuler") } },
     )
 }

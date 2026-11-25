@@ -5,4 +5,6 @@
     <string name="shortcut_crisis">Crise en cours</string>
     <string name="widget_description">Prochain médicament, dernière fréquence respiratoire, comptage rapide</string>
     <string name="tile_breath">Respirations</string>
+    <string name="crisis_widget_label">Crise en cours</string>
+    <string name="crisis_widget_description">Un tap pour filmer une crise et l\'horodater</string>
 </resources>

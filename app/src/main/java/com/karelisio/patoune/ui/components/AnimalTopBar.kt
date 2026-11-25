@@ -79,6 +79,8 @@ fun AnimalTopBar(vm: MainViewModel, title: String? = null, scroll: TopAppBarScro
                     }
                     DropdownMenuItem(text = { Text("Nouvel animal") }, leadingIcon = { Icon(Icons.Rounded.Add, null) },
                         onClick = { open = false; nav.navigate(Routes.AnimalEdit()) })
+                    DropdownMenuItem(text = { Text("Gérer les animaux") }, leadingIcon = { Icon(Icons.Rounded.Settings, null) },
+                        onClick = { open = false; nav.navigate(Routes.Animals) })
                     selected?.let { a ->
                         DropdownMenuItem(text = { Text("Modifier ${a.name}") }, onClick = { open = false; nav.navigate(Routes.AnimalEdit(a.id)) })
                     }

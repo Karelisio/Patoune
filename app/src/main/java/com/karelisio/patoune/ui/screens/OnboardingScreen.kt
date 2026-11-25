@@ -78,9 +78,12 @@ fun OnboardingScreen(vm: MainViewModel) {
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
     val perms = AppPermission.entries
-    val pages = 3 + perms.size
-    val pager = rememberPagerState { pages }
     var mode by remember { mutableStateOf(StartMode.SOLO) }
+    // Rejoindre un foyer : pas de fiche animal, les animaux arrivent du foyer après l'appairage.
+    val withAnimal = mode != StartMode.JOIN
+    val animalPages = if (withAnimal) 1 else 0
+    val pages = 2 + animalPages + perms.size
+    val pager = rememberPagerState { pages }
     val next: () -> Unit = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } }
     val finish: () -> Unit = {
         scope.launch {
@@ -91,15 +94,15 @@ fun OnboardingScreen(vm: MainViewModel) {
     }
 
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
-        HorizontalPager(pager, Modifier.weight(1f), userScrollEnabled = pager.currentPage != 1) { page ->
-            when (page) {
-                0 -> IntroPage(next)
-                1 -> Column(Modifier.fillMaxSize()) {
+        HorizontalPager(pager, Modifier.weight(1f), userScrollEnabled = !(withAnimal && pager.currentPage == 2)) { page ->
+            when {
+                page == 0 -> IntroPage(next)
+                page == 1 -> ModePage(mode, { mode = it }, next)
+                withAnimal && page == 2 -> Column(Modifier.fillMaxSize()) {
                     Text("Votre compagnon", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(24.dp, 16.dp, 24.dp, 0.dp))
                     AnimalEditScreen(vm, null, onSaved = next, embedded = true)
                 }
-                2 -> ModePage(mode, { mode = it }, next)
-                else -> PermissionPage(perms[page - 3], last = page == pages - 1, onNext = { if (page == pages - 1) finish() else next() })
+                else -> PermissionPage(perms[page - 2 - animalPages], last = page == pages - 1, onNext = { if (page == pages - 1) finish() else next() })
             }
         }
         Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.Center) {
@@ -143,7 +146,7 @@ private fun ModePage(mode: StartMode, onMode: (StartMode) -> Unit, onNext: () ->
         Text("Modifiable à tout moment dans les réglages.", style = MaterialTheme.typography.bodyMedium)
         ModeCard(Icons.Rounded.Person, "Solo", "Tout reste sur ce téléphone, sans compte ni réseau.", mode == StartMode.SOLO) { onMode(StartMode.SOLO) }
         ModeCard(Icons.Rounded.GroupAdd, "Créer un foyer", "Partagez avec conjoint, famille ou pet-sitter (2 à 6 personnes), chiffré de bout en bout.", mode == StartMode.CREATE) { onMode(StartMode.CREATE) }
-        ModeCard(Icons.Rounded.Group, "Rejoindre un foyer", "Scannez le QR code affiché par un membre.", mode == StartMode.JOIN) { onMode(StartMode.JOIN) }
+        ModeCard(Icons.Rounded.Group, "Rejoindre un foyer", "Scannez le QR code d'un membre : ses animaux arrivent automatiquement, rien à ressaisir.", mode == StartMode.JOIN) { onMode(StartMode.JOIN) }
         Spacer(Modifier.weight(1f))
         Button(onClick = onNext, Modifier.fillMaxWidth()) { Text("Continuer") }
     }
