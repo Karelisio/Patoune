@@ -1,0 +1,19 @@
+{
+  "name": "patoune-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.9.2",
+    "@cloudflare/workers-types": "5.20261125.1",
+    "@types/node": "22.20.6",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1",
+    "wrangler": "4.168.0"
+  }
+}

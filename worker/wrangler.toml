@@ -1,0 +1,24 @@
+# Worker Patoune : relais de blobs chiffrés pour le mode partagé.
+# Le serveur ne voit que des identifiants aléatoires et des données chiffrées côté téléphone.
+name = "patoune"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Taille max d'un média chiffré (octets) et quota R2 par foyer.
+MAX_MEDIA_BYTES = "52428800"
+QUOTA_BYTES = "2147483648"
+MAX_MEMBERS = "6"
+FCM_PROJECT_ID = "patoune-230d3"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "patoune"
+# Remplacé par le workflow de déploiement (création de la base si absente).
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "patoune-media"

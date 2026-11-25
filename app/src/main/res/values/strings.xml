@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Patoune</string>
+    <string name="shortcut_emergency">Fiche urgence</string>
+    <string name="shortcut_breath">Compter les respirations</string>
+    <string name="shortcut_crisis">Crise en cours</string>
+    <string name="widget_description">Prochain médicament, dernière fréquence respiratoire, comptage rapide</string>
+    <string name="tile_breath">Respirations</string>
+</resources>
