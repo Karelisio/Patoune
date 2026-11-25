@@ -18,6 +18,8 @@ import java.net.URL
 @Serializable data class BlobIn(val seq: Long, val id: String, val epoch: Int, val data: String)
 @Serializable data class BlobsResp(val epoch: Int, val blobs: List<BlobIn>)
 @Serializable data class Quota(val used: Long, val max: Long, val maxMedia: Long)
+/** État d'un média sur le serveur : parts = 0 pour l'ancien format (un seul blob), sinon nombre de morceaux. */
+@Serializable data class MediaInfo(val parts: Int, val size: Long, val format: Int = if (parts > 0) 2 else 1)
 
 class ApiException(val status: Int, message: String) : IOException("HTTP $status : $message")
 
@@ -33,8 +35,16 @@ interface HouseholdApi {
     suspend fun keys(): KeysResp
     suspend fun pushBlobs(blobs: List<BlobOut>): Long
     suspend fun blobs(after: Long, limit: Int = 200): BlobsResp
+    /** Ancien format (v1) : média chiffré d'un seul bloc. Conservé pour relire les médias déjà envoyés. */
     suspend fun putMedia(id: String, bytes: ByteArray)
     suspend fun getMedia(id: String): ByteArray?
+    /** Format v2 : un morceau chiffré (idempotent : renvoyer le même index le remplace). */
+    suspend fun putMediaPart(id: String, index: Int, bytes: ByteArray)
+    /** Enregistre le média une fois les morceaux 0..parts-1 reçus ; size = total chiffré (vérifié par le serveur). */
+    suspend fun completeMedia(id: String, parts: Int, size: Long)
+    /** null si le média n'existe pas (encore) sur le serveur. */
+    suspend fun mediaInfo(id: String): MediaInfo?
+    suspend fun getMediaPart(id: String, index: Int): ByteArray?
     suspend fun quota(): Quota
     suspend fun push(data: String)
     suspend fun setFcmToken(token: String?)
@@ -109,6 +119,22 @@ class HttpApi(private val session: suspend () -> Pair<String, String>?) : Househ
     override suspend fun getMedia(id: String): ByteArray? {
         val (srv, token) = authed()
         return raw("GET", "${srv.trimEnd('/')}/v1/media/$id", token, null)
+    }
+    override suspend fun putMediaPart(id: String, index: Int, bytes: ByteArray) {
+        val (srv, token) = authed()
+        raw("PUT", "${srv.trimEnd('/')}/v1/media/$id/parts/$index", token, bytes, "application/octet-stream")
+    }
+    override suspend fun completeMedia(id: String, parts: Int, size: Long) {
+        call<kotlinx.serialization.json.JsonObject>("POST", "/v1/media/$id/complete", obj("parts" to parts, "size" to size))
+    }
+    override suspend fun mediaInfo(id: String): MediaInfo? {
+        val (srv, token) = authed()
+        val res = raw("GET", "${srv.trimEnd('/')}/v1/media/$id/info", token, null) ?: return null
+        return json.decodeFromString(res.decodeToString())
+    }
+    override suspend fun getMediaPart(id: String, index: Int): ByteArray? {
+        val (srv, token) = authed()
+        return raw("GET", "${srv.trimEnd('/')}/v1/media/$id/parts/$index", token, null)
     }
     override suspend fun quota(): Quota = call("GET", "/v1/quota")
     override suspend fun push(data: String) { call<kotlinx.serialization.json.JsonObject>("POST", "/v1/push", obj("data" to data)) }

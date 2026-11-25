@@ -6,8 +6,8 @@ compatibility_date = "2026-11-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-# Taille max d'un média chiffré (octets) et quota R2 par foyer.
-MAX_MEDIA_BYTES = "52428800"
+# Taille max d'un média chiffré (octets, total de ses morceaux) et quota R2 par foyer.
+MAX_MEDIA_BYTES = "209715200"
 QUOTA_BYTES = "2147483648"
 MAX_MEMBERS = "6"
 FCM_PROJECT_ID = "patoune-230d3"

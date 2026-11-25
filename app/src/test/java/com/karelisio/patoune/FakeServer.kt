@@ -10,9 +10,11 @@ import com.karelisio.patoune.sync.HouseholdManager
 import com.karelisio.patoune.sync.InviteResp
 import com.karelisio.patoune.sync.JoinResp
 import com.karelisio.patoune.sync.KeysResp
+import com.karelisio.patoune.sync.MediaInfo
 import com.karelisio.patoune.sync.MembersResp
 import com.karelisio.patoune.sync.Quota
 import com.karelisio.patoune.sync.RemoteMember
+import java.io.IOException
 import java.util.UUID
 
 /** Réplique en mémoire du Worker (mêmes règles), pour tester la sync sans réseau. */
@@ -23,7 +25,16 @@ class FakeServer {
     val invites = HashMap<String, Triple<String, String, Boolean>>()
     val blobs = ArrayList<Triple<String, Long, BlobIn>>()
     val wrapped = HashMap<Triple<String, Int, String>, String>()
+    /** Médias à l'ancien format (un seul blob). */
     val media = HashMap<Pair<String, String>, ByteArray>()
+    /** Format v2 : morceaux chiffrés (foyer, id, index) et médias terminés. */
+    val parts = HashMap<Triple<String, String, Int>, ByteArray>()
+    val completed = HashMap<Pair<String, String>, MediaInfo>()
+    /** Morceaux acceptés, dans l'ordre de réception (pour vérifier la reprise). */
+    val partUploads = ArrayList<Pair<String, Int>>()
+    /** Si renvoie vrai pour (id, index), l'envoi de ce morceau échoue une fois (coupure réseau). */
+    var failPart: ((String, Int) -> Boolean)? = null
+    var maxMedia: Long = 200L shl 20
     val pushes = ArrayList<String>()
     /** Tout ce que le serveur a reçu, pour vérifier qu'aucune donnée n'arrive en clair. */
     val received = StringBuilder()
@@ -31,6 +42,11 @@ class FakeServer {
     private var clock = 0L
 
     fun client(token: () -> String?): HouseholdApi = Client(token)
+
+    private companion object {
+        /** Comme le Worker : ~1,1 Mio par morceau chiffré. */
+        const val MAX_PART = 1_153_433
+    }
 
     private inner class Client(private val tokenOf: () -> String?) : HouseholdApi {
         private fun me(): M = members.firstOrNull { it.token == tokenOf() } ?: throw ApiException(401, "unknown token")
@@ -87,9 +103,41 @@ class FakeServer {
             val m = me()
             return BlobsResp(households[m.hid]!!, blobs.filter { it.first == m.hid && it.second > after }.take(limit).map { it.third })
         }
-        override suspend fun putMedia(id: String, bytes: ByteArray) { media[me().hid to id] = bytes; received.append(String(bytes, Charsets.ISO_8859_1)) }
+        override suspend fun putMedia(id: String, bytes: ByteArray) {
+            val hid = me().hid
+            media[hid to id] = bytes; completed.remove(hid to id); parts.keys.removeAll { it.first == hid && it.second == id }
+            received.append(String(bytes, Charsets.ISO_8859_1))
+        }
         override suspend fun getMedia(id: String): ByteArray? = media[me().hid to id]
-        override suspend fun quota(): Quota = Quota(media.filterKeys { it.first == me().hid }.values.sumOf { it.size.toLong() }, 1 shl 30, 50 shl 20)
+        override suspend fun putMediaPart(id: String, index: Int, bytes: ByteArray) {
+            val hid = me().hid
+            if (failPart?.invoke(id, index) == true) { failPart = null; throw IOException("coupure réseau simulée") }
+            if (bytes.size > MAX_PART) throw ApiException(413, "too large")
+            val others = parts.filterKeys { it.first == hid && it.second == id && it.third != index }.values.sumOf { it.size.toLong() }
+            if (others + bytes.size > maxMedia) throw ApiException(413, "too large")
+            parts[Triple(hid, id, index)] = bytes
+            partUploads += id to index
+            received.append(String(bytes, Charsets.ISO_8859_1))
+        }
+        override suspend fun completeMedia(id: String, parts: Int, size: Long) {
+            val hid = me().hid
+            val got = (0 until parts).map { this@FakeServer.parts[Triple(hid, id, it)] ?: throw ApiException(409, "missing parts") }
+            if (got.sumOf { it.size.toLong() } != size) throw ApiException(409, "size")
+            this@FakeServer.parts.keys.removeAll { it.first == hid && it.second == id && it.third >= parts }
+            media.remove(hid to id)
+            completed[hid to id] = MediaInfo(parts, size)
+        }
+        override suspend fun mediaInfo(id: String): MediaInfo? {
+            val hid = me().hid
+            return completed[hid to id] ?: media[hid to id]?.let { MediaInfo(0, it.size.toLong()) }
+        }
+        override suspend fun getMediaPart(id: String, index: Int): ByteArray? = parts[Triple(me().hid, id, index)]
+        override suspend fun quota(): Quota {
+            val hid = me().hid
+            val used = media.filterKeys { it.first == hid }.values.sumOf { it.size.toLong() } +
+                parts.filterKeys { it.first == hid }.values.sumOf { it.size.toLong() }
+            return Quota(used, 1L shl 30, maxMedia)
+        }
         override suspend fun push(data: String) { me(); pushes += data; received.append(data) }
         override suspend fun setFcmToken(token: String?) { me() }
     }

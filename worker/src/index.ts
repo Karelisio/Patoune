@@ -74,10 +74,49 @@ async function creatorOf(env: Env, householdId: string) {
   return env.DB.prepare("SELECT * FROM members WHERE household_id = ? AND is_creator = 1").bind(householdId).first<Member>();
 }
 
+/**
+ * Octets occupés par le foyer : médias à l'ancien format (un objet) + tous les morceaux reçus
+ * (médias v2 complets ou en cours d'envoi). Un média v2 n'est compté qu'à travers ses morceaux.
+ */
 async function quotaUsed(env: Env, householdId: string): Promise<number> {
-  const r = await env.DB.prepare("SELECT COALESCE(SUM(size), 0) AS used FROM media WHERE household_id = ?").bind(householdId).first<{ used: number }>();
+  const r = await env.DB.prepare(
+    "SELECT (SELECT COALESCE(SUM(size), 0) FROM media WHERE household_id = ?1 AND parts = 0) + (SELECT COALESCE(SUM(size), 0) FROM media_parts WHERE household_id = ?1) AS used",
+  ).bind(householdId).first<{ used: number }>();
   return r?.used ?? 0;
 }
+
+/** Supprime tous les objets R2 sous un préfixe (par pages, 1000 clés max par suppression). */
+async function deletePrefix(env: Env, prefix: string) {
+  let cursor: string | undefined;
+  do {
+    const page = await env.MEDIA.list({ prefix, cursor });
+    if (page.objects.length) await env.MEDIA.delete(page.objects.map((o) => o.key));
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+}
+
+/** Efface un média, quel que soit son format : objet unique, morceaux et lignes de suivi. */
+async function deleteMedia(env: Env, hid: string, id: string) {
+  await env.MEDIA.delete(`${hid}/${id}`);
+  await deletePrefix(env, `${hid}/${id}/`);
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM media WHERE household_id = ? AND id = ?").bind(hid, id),
+    env.DB.prepare("DELETE FROM media_parts WHERE household_id = ? AND id = ?").bind(hid, id),
+  ]);
+}
+
+/** Lit un corps binaire en refusant (413) tout ce qui dépasse `max` octets. */
+async function readLimited(req: Request, max: number): Promise<ArrayBuffer> {
+  const len = Number(req.headers.get("content-length") ?? "0");
+  if (len > max) throw new HttpError(413, "too large");
+  const data = await req.arrayBuffer();
+  if (data.byteLength > max) throw new HttpError(413, "too large");
+  return data;
+}
+
+/** Taille max d'un morceau chiffré : 1 Mio de clair + epoch, nonce et tag AES-GCM, avec de la marge. */
+const MAX_PART_BYTES = Math.floor(1.1 * 1024 * 1024);
+const MAX_PARTS = 10_000;
 
 /** Retire un membre ; si c'est le créateur, le plus ancien membre restant le devient. */
 async function removeMember(env: Env, m: Member) {
@@ -91,11 +130,11 @@ async function removeMember(env: Env, m: Member) {
 }
 
 async function deleteHousehold(env: Env, hid: string) {
-  const media = await env.DB.prepare("SELECT id FROM media WHERE household_id = ?").bind(hid).all<{ id: string }>();
-  if (media.results.length) await env.MEDIA.delete(media.results.map((r) => `${hid}/${r.id}`));
+  await deletePrefix(env, `${hid}/`);
   await env.DB.batch([
     env.DB.prepare("DELETE FROM blobs WHERE household_id = ?").bind(hid),
     env.DB.prepare("DELETE FROM media WHERE household_id = ?").bind(hid),
+    env.DB.prepare("DELETE FROM media_parts WHERE household_id = ?").bind(hid),
     env.DB.prepare("DELETE FROM invites WHERE household_id = ?").bind(hid),
     env.DB.prepare("DELETE FROM wrapped_keys WHERE household_id = ?").bind(hid),
     env.DB.prepare("DELETE FROM households WHERE id = ?").bind(hid),
@@ -222,18 +261,22 @@ async function route(req: Request, env: Env, ctx: ExecutionContext): Promise<Res
     return json({ epoch: h.epoch, blobs: rows.results });
   }
 
-  // Médias chiffrés sur R2.
+  // Médias chiffrés sur R2. Ancien format : un seul objet `${hid}/${id}` (PUT/GET /v1/media/:id).
   const media = p.match(/^\/v1\/media\/([A-Za-z0-9_\-]{8,64})$/);
   if (media && m === "PUT") {
+    const id = media[1];
     const max = Number(env.MAX_MEDIA_BYTES);
-    const len = Number(req.headers.get("content-length") ?? "0");
-    if (len > max) throw new HttpError(413, "too large");
-    const data = await req.arrayBuffer();
-    if (data.byteLength > max) throw new HttpError(413, "too large");
-    const existing = await env.DB.prepare("SELECT size FROM media WHERE household_id = ? AND id = ?").bind(hid, media[1]).first<{ size: number }>();
+    const data = await readLimited(req, max);
+    const existing = await env.DB.prepare(
+      "SELECT (SELECT COALESCE(SUM(size), 0) FROM media WHERE household_id = ?1 AND id = ?2 AND parts = 0) + (SELECT COALESCE(SUM(size), 0) FROM media_parts WHERE household_id = ?1 AND id = ?2) AS size",
+    ).bind(hid, id).first<{ size: number }>();
     if ((await quotaUsed(env, hid)) - (existing?.size ?? 0) + data.byteLength > Number(env.QUOTA_BYTES)) throw new HttpError(507, "quota");
-    await env.MEDIA.put(`${hid}/${media[1]}`, data);
-    await env.DB.prepare("INSERT OR REPLACE INTO media (household_id, id, size, created_at) VALUES (?, ?, ?, ?)").bind(hid, media[1], data.byteLength, Date.now()).run();
+    await deletePrefix(env, `${hid}/${id}/`);
+    await env.MEDIA.put(`${hid}/${id}`, data);
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM media_parts WHERE household_id = ? AND id = ?").bind(hid, id),
+      env.DB.prepare("INSERT OR REPLACE INTO media (household_id, id, size, parts, created_at) VALUES (?, ?, ?, 0, ?)").bind(hid, id, data.byteLength, Date.now()),
+    ]);
     return json({ ok: true, size: data.byteLength }, 201);
   }
 
@@ -244,9 +287,65 @@ async function route(req: Request, env: Env, ctx: ExecutionContext): Promise<Res
   }
 
   if (media && m === "DELETE") {
-    await env.MEDIA.delete(`${hid}/${media[1]}`);
-    await env.DB.prepare("DELETE FROM media WHERE household_id = ? AND id = ?").bind(hid, media[1]).run();
+    await deleteMedia(env, hid, media[1]);
     return json({ ok: true });
+  }
+
+  // Format v2 : morceaux chiffrés `${hid}/${id}/${n}`, puis « complete » enregistre le média.
+  const part = p.match(/^\/v1\/media\/([A-Za-z0-9_\-]{8,64})\/parts\/(\d{1,5})$/);
+  if (part && m === "PUT") {
+    const [, id, ns] = part;
+    const n = Number(ns);
+    if (n >= MAX_PARTS) throw new HttpError(400, "part");
+    const max = Number(env.MAX_MEDIA_BYTES);
+    const data = await readLimited(req, Math.min(MAX_PART_BYTES, max));
+    const cur = await env.DB.prepare(
+      "SELECT COALESCE(SUM(size), 0) AS total, COALESCE(SUM(CASE WHEN n = ? THEN size ELSE 0 END), 0) AS same FROM media_parts WHERE household_id = ? AND id = ?",
+    ).bind(n, hid, id).first<{ total: number; same: number }>();
+    const same = cur?.same ?? 0;
+    // Ré-envoi du même morceau : il remplace l'ancien, sans être compté deux fois.
+    if ((cur?.total ?? 0) - same + data.byteLength > max) throw new HttpError(413, "too large");
+    if ((await quotaUsed(env, hid)) - same + data.byteLength > Number(env.QUOTA_BYTES)) throw new HttpError(507, "quota");
+    await env.MEDIA.put(`${hid}/${id}/${n}`, data);
+    await env.DB.prepare("INSERT OR REPLACE INTO media_parts (household_id, id, n, size, created_at) VALUES (?, ?, ?, ?, ?)")
+      .bind(hid, id, n, data.byteLength, Date.now()).run();
+    return json({ ok: true, size: data.byteLength }, 201);
+  }
+
+  if (part && m === "GET") {
+    const obj = await env.MEDIA.get(`${hid}/${part[1]}/${Number(part[2])}`);
+    if (!obj) throw new HttpError(404, "part");
+    return new Response(obj.body, { headers: { "content-type": "application/octet-stream" } });
+  }
+
+  const complete = p.match(/^\/v1\/media\/([A-Za-z0-9_\-]{8,64})\/complete$/);
+  if (complete && m === "POST") {
+    const id = complete[1];
+    const b = await body<{ parts?: number; size?: number }>(req);
+    const parts = b.parts;
+    if (typeof parts !== "number" || !Number.isInteger(parts) || parts < 1 || parts > MAX_PARTS) throw new HttpError(400, "parts");
+    const have = await env.DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(size), 0) AS size FROM media_parts WHERE household_id = ? AND id = ? AND n < ?")
+      .bind(hid, id, parts).first<{ n: number; size: number }>();
+    if ((have?.n ?? 0) !== parts) throw new HttpError(409, "missing parts");
+    const size = have?.size ?? 0;
+    if (b.size !== undefined && b.size !== size) throw new HttpError(409, "size");
+    if (size > Number(env.MAX_MEDIA_BYTES)) throw new HttpError(413, "too large");
+    // Morceaux au-delà du total (envoi précédent abandonné) et ancien objet unique : supprimés.
+    const extra = await env.DB.prepare("SELECT n FROM media_parts WHERE household_id = ? AND id = ? AND n >= ?").bind(hid, id, parts).all<{ n: number }>();
+    if (extra.results.length) await env.MEDIA.delete(extra.results.map((r) => `${hid}/${id}/${r.n}`));
+    await env.MEDIA.delete(`${hid}/${id}`);
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM media_parts WHERE household_id = ? AND id = ? AND n >= ?").bind(hid, id, parts),
+      env.DB.prepare("INSERT OR REPLACE INTO media (household_id, id, size, parts, created_at) VALUES (?, ?, ?, ?, ?)").bind(hid, id, size, parts, Date.now()),
+    ]);
+    return json({ ok: true, parts, size });
+  }
+
+  const info = p.match(/^\/v1\/media\/([A-Za-z0-9_\-]{8,64})\/info$/);
+  if (info && m === "GET") {
+    const row = await env.DB.prepare("SELECT size, parts FROM media WHERE household_id = ? AND id = ?").bind(hid, info[1]).first<{ size: number; parts: number }>();
+    if (!row) throw new HttpError(404, "media");
+    return json({ parts: row.parts, size: row.size, format: row.parts > 0 ? 2 : 1 });
   }
 
   if (p === "/v1/quota" && m === "GET") {
