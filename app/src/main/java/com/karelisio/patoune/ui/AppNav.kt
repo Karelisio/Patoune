@@ -41,6 +41,7 @@ import com.karelisio.patoune.ui.screens.CrisisEditScreen
 import com.karelisio.patoune.ui.screens.JournalScreen
 import com.karelisio.patoune.ui.screens.MediaViewerScreen
 import com.karelisio.patoune.ui.screens.AnimalEditScreen
+import com.karelisio.patoune.ui.screens.BreathAutoScreen
 import com.karelisio.patoune.ui.screens.AirScreen
 import com.karelisio.patoune.ui.screens.ReportScreen
 import com.karelisio.patoune.ui.screens.HouseholdScreen
@@ -141,6 +142,7 @@ private fun NavGraphBuilder.graph(vm: MainViewModel, settings: AppSettings) {
     composable<Routes.MedicationEdit> { MedicationEditScreen(vm, it.toRoute<Routes.MedicationEdit>().id) }
     composable<Routes.MedicationDetail> { WithAnim(this) { MedicationDetailScreen(vm, it.toRoute<Routes.MedicationDetail>().id) } }
     composable<Routes.Breath> { BreathScreen(vm) }
+    composable<Routes.BreathAuto> { BreathAutoScreen(vm) }
     composable<Routes.BreathCounter> { BreathCounterScreen(vm, it.toRoute<Routes.BreathCounter>().night) }
     composable<Routes.Journal> { WithAnim(this) { JournalScreen(vm) } }
     composable<Routes.CrisisEdit> { val r = it.toRoute<Routes.CrisisEdit>(); WithAnim(this) { CrisisEditScreen(vm, r.id, r.startRecording) } }

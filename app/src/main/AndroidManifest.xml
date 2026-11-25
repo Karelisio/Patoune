@@ -66,6 +66,25 @@
             </intent-filter>
         </service>
 
+        <receiver android:name=".widget.PatouneWidgetReceiver" android:exported="true" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/patoune_widget" />
+        </receiver>
+
+        <service
+            android:name=".widget.BreathTile"
+            android:exported="true"
+            android:icon="@drawable/ic_paw"
+            android:label="@string/tile_breath"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="false" />
+        </service>
+
         <receiver android:name=".update.InstallReceiver" android:exported="false" />
         <receiver android:name=".reminders.ReminderReceiver" android:exported="false" />
         <receiver android:name=".reminders.BootReceiver" android:exported="true">
