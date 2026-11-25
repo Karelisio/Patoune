@@ -204,6 +204,7 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 context.container.reminders.rescheduleAll()
                 DailyWorker.schedule(context)
+                context.container.widgets.refresh()
             } finally { pending.finish() }
         }
     }

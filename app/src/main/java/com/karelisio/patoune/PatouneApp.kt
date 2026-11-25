@@ -21,7 +21,7 @@ class PatouneApp : Application(), SingletonImageLoader.Factory {
         container = AppContainer(this)
         Notif.createChannels(this)
         DailyWorker.schedule(this)
-        container.scope.launch { container.reminders.rescheduleAll() }
+        container.scope.launch { container.reminders.rescheduleAll(); container.widgets.refresh() }
     }
 }
 

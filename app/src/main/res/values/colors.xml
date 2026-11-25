@@ -2,4 +2,6 @@
     <color name="ic_background">#FFDBCF</color>
     <color name="ic_foreground">#9A4A2B</color>
     <color name="splash_background">#FFF8F5</color>
+    <color name="widget_crisis_bg">#FFDBCF</color>
+    <color name="widget_crisis_fg">#3A0B00</color>
 </resources>

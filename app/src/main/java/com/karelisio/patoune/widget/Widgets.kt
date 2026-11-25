@@ -58,7 +58,10 @@ import com.karelisio.patoune.reminders.Notif
 
 /** Rafraîchissement des widgets de l'écran d'accueil. */
 class Widgets(private val context: Context) {
-    suspend fun refresh() { runCatching { PatouneWidget().updateAll(context) } }
+    suspend fun refresh() {
+        runCatching { PatouneWidget().updateAll(context) }
+        runCatching { CrisisWidgetReceiver.updateAll(context) }
+    }
 }
 
 private data class WidgetState(

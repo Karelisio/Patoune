@@ -1,0 +1,4 @@
+<resources>
+    <color name="widget_crisis_bg">@android:color/system_accent3_700</color>
+    <color name="widget_crisis_fg">@android:color/system_accent3_100</color>
+</resources>
