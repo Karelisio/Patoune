@@ -37,7 +37,7 @@ class MainViewModel(private val c: AppContainer) : ViewModel() {
 
     val release = MutableStateFlow<Release?>(null)
 
-    fun select(id: String) = viewModelScope.launch { c.settings.selectAnimal(id) }
+    fun select(id: String?) = viewModelScope.launch { c.settings.selectAnimal(id) }
 
     fun checkUpdate(force: Boolean = false) = viewModelScope.launch {
         c.updater.check(force)?.let { release.value = it }

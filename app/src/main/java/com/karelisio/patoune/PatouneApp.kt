@@ -1,6 +1,9 @@
 package com.karelisio.patoune
 
 import android.app.Application
+import com.karelisio.patoune.reminders.DailyWorker
+import com.karelisio.patoune.reminders.Notif
+import kotlinx.coroutines.launch
 
 class PatouneApp : Application() {
     lateinit var container: AppContainer
@@ -9,6 +12,9 @@ class PatouneApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        Notif.createChannels(this)
+        DailyWorker.schedule(this)
+        container.scope.launch { container.reminders.rescheduleAll() }
     }
 }
 
