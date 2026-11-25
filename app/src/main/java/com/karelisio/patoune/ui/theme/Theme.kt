@@ -23,7 +23,7 @@ private val PeachLight = Color(0xFFFFDBCF)
 private val Sage = Color(0xFF55634F)
 private val SageLight = Color(0xFFD8E8CE)
 
-private val LightFallback: ColorScheme = lightColorScheme(
+internal val LightFallback: ColorScheme = lightColorScheme(
     primary = Peach, onPrimary = Color.White, primaryContainer = PeachLight, onPrimaryContainer = Color(0xFF3A0B00),
     secondary = Sage, onSecondary = Color.White, secondaryContainer = SageLight, onSecondaryContainer = Color(0xFF131F10),
     tertiary = Color(0xFF6B5E2F), tertiaryContainer = Color(0xFFF5E2A7), onTertiaryContainer = Color(0xFF231B00),
@@ -36,7 +36,7 @@ private val LightFallback: ColorScheme = lightColorScheme(
     outline = Color(0xFF85736D), outlineVariant = Color(0xFFD8C2BA),
 )
 
-private val DarkFallback: ColorScheme = darkColorScheme(
+internal val DarkFallback: ColorScheme = darkColorScheme(
     primary = Color(0xFFFFB59A), onPrimary = Color(0xFF5B1A03), primaryContainer = Color(0xFF7B3317), onPrimaryContainer = PeachLight,
     secondary = Color(0xFFBCCCB3), onSecondary = Color(0xFF273423), secondaryContainer = Color(0xFF3D4B38), onSecondaryContainer = SageLight,
     tertiary = Color(0xFFD8C68D), tertiaryContainer = Color(0xFF524619), onTertiaryContainer = Color(0xFFF5E2A7),

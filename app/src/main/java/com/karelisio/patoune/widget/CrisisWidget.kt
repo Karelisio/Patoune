@@ -6,6 +6,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
+import androidx.glance.ButtonDefaults
+import androidx.glance.appwidget.components.CircleIconButton
+import androidx.glance.appwidget.components.FilledButton
+import androidx.glance.layout.Box
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
@@ -40,27 +44,27 @@ class CrisisWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(DpSize(57.dp, 57.dp), DpSize(130.dp, 57.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        provideContent { GlanceTheme { Content() } }
+        provideContent { PatouneGlanceTheme { Content() } }
     }
 
     @Composable
     private fun Content() {
         val wide = LocalSize.current.width >= 130.dp
+        val colors = GlanceTheme.colors
         val open = actionStartActivity(
             Intent().setClassName("com.karelisio.patoune", MainActivity::class.java.name)
                 .putExtra(MainActivity.EXTRA_ACTION, MainActivity.ACTION_CRISIS)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
         )
-        Column(
-            GlanceModifier.fillMaxSize().appWidgetBackground().background(GlanceTheme.colors.error)
-                .cornerRadius(android.R.dimen.system_app_widget_background_radius).padding(8.dp).clickable(open),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically,
+        Box(
+            GlanceModifier.fillMaxSize().appWidgetBackground().background(colors.widgetBackground)
+                .cornerRadius(android.R.dimen.system_app_widget_background_radius).padding(6.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Image(ImageProvider(R.drawable.ic_videocam), "Filmer", GlanceModifier.size(if (wide) 28.dp else 24.dp))
-            if (wide) {
-                Spacer(GlanceModifier.height(4.dp))
-                Text("Crise en cours", style = TextStyle(color = GlanceTheme.colors.onError, fontWeight = FontWeight.Bold, fontSize = 13.sp, textAlign = TextAlign.Center))
-            }
+            if (wide) FilledButton("Crise en cours", open, GlanceModifier.fillMaxSize(), icon = ImageProvider(R.drawable.ic_videocam),
+                colors = ButtonDefaults.buttonColors(colors.errorContainer, colors.onErrorContainer))
+            else CircleIconButton(ImageProvider(R.drawable.ic_videocam), "Crise en cours : filmer", open, GlanceModifier.fillMaxSize(),
+                backgroundColor = colors.errorContainer, contentColor = colors.onErrorContainer)
         }
     }
 }

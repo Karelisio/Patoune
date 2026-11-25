@@ -7,6 +7,11 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
+import androidx.glance.ButtonDefaults
+import androidx.glance.appwidget.components.CircleIconButton
+import androidx.glance.appwidget.components.FilledButton
+import androidx.glance.appwidget.components.Scaffold
+import androidx.glance.appwidget.components.TitleBar
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
@@ -67,7 +72,7 @@ class PatouneWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val state = load(context)
-        provideContent { GlanceTheme { Content(state) } }
+        provideContent { PatouneGlanceTheme { Content(state) } }
     }
 
     private suspend fun load(context: Context): WidgetState {
@@ -92,46 +97,74 @@ class PatouneWidget : GlanceAppWidget() {
     @Composable
     private fun Content(s: WidgetState) {
         val size = LocalSize.current
-        val wide = size.width >= 250.dp
-        val tall = size.height >= 200.dp
-        Column(
-            GlanceModifier.fillMaxSize().appWidgetBackground().background(GlanceTheme.colors.widgetBackground)
-                .cornerRadius(android.R.dimen.system_app_widget_background_radius).padding(12.dp),
+        val roomy = size.width >= 250.dp || size.height >= 200.dp
+        val count = actionStartActivity(
+            Intent().setClassName("com.karelisio.patoune", MainActivity::class.java.name)
+                .putExtra(MainActivity.EXTRA_ACTION, MainActivity.ACTION_BREATH)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        )
+        val colors = GlanceTheme.colors
+        Scaffold(
+            titleBar = {
+                TitleBar(
+                    startIcon = ImageProvider(R.drawable.ic_paw),
+                    title = s.animal ?: "Patoune",
+                    iconColor = colors.primary,
+                    textColor = colors.onSurface,
+                    actions = {
+                        CircleIconButton(ImageProvider(R.drawable.ic_air), "Compter les respirations", count,
+                            backgroundColor = null, contentColor = colors.primary)
+                    },
+                )
+            },
+            backgroundColor = colors.widgetBackground,
+            horizontalPadding = 12.dp,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(ImageProvider(R.drawable.ic_paw), null, GlanceModifier.size(18.dp))
-                Spacer(GlanceModifier.width(6.dp))
-                Text(s.animal ?: "Patoune", style = TextStyle(color = GlanceTheme.colors.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp))
-            }
-            Spacer(GlanceModifier.height(8.dp))
-            if (s.medName != null) {
-                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(GlanceModifier.defaultWeight()) {
-                        Text(s.medName, style = TextStyle(color = GlanceTheme.colors.onSurface, fontWeight = FontWeight.Medium, fontSize = 13.sp), maxLines = 1)
-                        Text(if (s.given) "Donné" + (s.givenBy?.let { " par $it" } ?: "") else s.medAt?.let { "À ${Dates.fmtTime(it)}" } ?: "",
-                            style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 12.sp))
+            Column(GlanceModifier.fillMaxSize()) {
+                if (s.medName != null) {
+                    // Carte « prochaine prise » sur fond de conteneur, comme dans l'appli.
+                    Row(
+                        GlanceModifier.fillMaxWidth().background(colors.secondaryContainer).cornerRadius(20.dp).padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(GlanceModifier.defaultWeight()) {
+                            Text(s.medName, style = TextStyle(color = colors.onSecondaryContainer, fontWeight = FontWeight.Medium, fontSize = 14.sp), maxLines = 1)
+                            Text(if (s.given) "Donné" + (s.givenBy?.let { " par $it" } ?: "") else s.medAt?.let { "À ${Dates.fmtTime(it)}" } ?: "",
+                                style = TextStyle(color = colors.onSecondaryContainer, fontSize = 12.sp))
+                        }
+                        if (!s.given && s.medId != null) {
+                            val give = actionRunCallback<GiveAction>(actionParametersOf(GiveAction.MED to s.medId))
+                            if (size.width >= 200.dp) FilledButton("Donné", give, icon = ImageProvider(R.drawable.ic_check),
+                                colors = ButtonDefaults.buttonColors(colors.primary, colors.onPrimary))
+                            else CircleIconButton(ImageProvider(R.drawable.ic_check), "Donné", give, backgroundColor = colors.primary, contentColor = colors.onPrimary)
+                        } else if (s.given) {
+                            CircleIconButton(ImageProvider(R.drawable.ic_check), "Déjà donné", actionRunCallback<RefreshAction>(),
+                                backgroundColor = colors.tertiaryContainer, contentColor = colors.onTertiaryContainer)
+                        }
                     }
-                    if (!s.given && s.medId != null) Box(
-                        GlanceModifier.background(GlanceTheme.colors.primary).cornerRadius(20.dp).padding(horizontal = 14.dp, vertical = 8.dp)
-                            .clickable(actionRunCallback<GiveAction>(actionParametersOf(GiveAction.MED to s.medId))),
-                    ) { Text("Donné", style = TextStyle(color = GlanceTheme.colors.onPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)) }
-                    else if (s.given) Text("✓", style = TextStyle(color = GlanceTheme.colors.tertiary, fontWeight = FontWeight.Bold, fontSize = 20.sp))
+                    Spacer(GlanceModifier.height(8.dp))
                 }
-                Spacer(GlanceModifier.height(8.dp))
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    val arrow = when (s.trend) { Breath.Trend.UP -> "↗"; Breath.Trend.DOWN -> "↘"; Breath.Trend.STABLE -> "→" }
+                    Text(s.bpm?.let { "${Breath.format(it)} resp/min $arrow" } ?: "Pas de mesure",
+                        style = TextStyle(color = if (s.over) colors.error else colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+                        modifier = GlanceModifier.defaultWeight())
+                }
+                if (roomy || s.medName == null) {
+                    Spacer(GlanceModifier.defaultWeight())
+                    FilledButton("Compter les respirations", count, GlanceModifier.fillMaxWidth(), icon = ImageProvider(R.drawable.ic_air),
+                        colors = ButtonDefaults.buttonColors(colors.secondaryContainer, colors.onSecondaryContainer))
+                }
+                Spacer(GlanceModifier.height(12.dp))
             }
-            if (wide || tall || s.medName == null) Row(verticalAlignment = Alignment.CenterVertically) {
-                val arrow = when (s.trend) { Breath.Trend.UP -> "↗"; Breath.Trend.DOWN -> "↘"; Breath.Trend.STABLE -> "→" }
-                Text(s.bpm?.let { "${Breath.format(it)} resp/min $arrow" } ?: "Pas de mesure",
-                    style = TextStyle(color = if (s.over) GlanceTheme.colors.error else GlanceTheme.colors.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Medium))
-            }
-            Spacer(GlanceModifier.defaultWeight())
-            Box(
-                GlanceModifier.fillMaxWidth().background(GlanceTheme.colors.secondaryContainer).cornerRadius(20.dp).padding(vertical = 8.dp)
-                    .clickable(actionStartActivity(Intent().setClassName("com.karelisio.patoune", MainActivity::class.java.name).putExtra(MainActivity.EXTRA_ACTION, MainActivity.ACTION_BREATH)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))),
-                contentAlignment = Alignment.Center,
-            ) { Text("Compter les respirations", style = TextStyle(color = GlanceTheme.colors.onSecondaryContainer, fontSize = 12.sp, fontWeight = FontWeight.Medium)) }
         }
+    }
+}
+
+/** Rafraîchit simplement le widget (tap sur la coche). */
+class RefreshAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        PatouneWidget().update(context, glanceId)
     }
 }
 
