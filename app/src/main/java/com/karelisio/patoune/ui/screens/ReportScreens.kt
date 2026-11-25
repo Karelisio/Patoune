@@ -1,5 +1,7 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.karelisio.patoune.air.City
@@ -51,6 +54,7 @@ import java.io.File
 @Composable
 fun ReportScreen(vm: MainViewModel) {
     val ctx = LocalContext.current
+    val res = LocalResources.current
     val c = ctx.container
     val scope = rememberCoroutineScope()
     val animal by vm.selected.collectAsStateWithLifecycle()
@@ -60,18 +64,18 @@ fun ReportScreen(vm: MainViewModel) {
     var file by remember { mutableStateOf<File?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(topBar = { BackTopBar("Rapport pour le véto") { file?.let { f -> IconButton(onClick = { shareFile(ctx, f, "application/pdf") }) { Icon(Icons.Rounded.Share, "Partager") } } } }) { pad ->
+    Scaffold(topBar = { BackTopBar(stringResource(R.string.report_title)) { file?.let { f -> IconButton(onClick = { shareFile(ctx, f, "application/pdf") }) { Icon(Icons.Rounded.Share, stringResource(R.string.action_share)) } } } }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(7L to "7 jours", 30L to "30 jours", 90L to "3 mois").forEach { (d, l) ->
+                    listOf(7L to R.string.range_week, 30L to R.string.range_month, 90L to R.string.range_3_months).forEach { (d, l) ->
                         val f = Dates.today().minusDays(d).toString()
-                        FilterChip(from == f && to == Dates.today().toString(), { from = f; to = Dates.today().toString() }, { Text(l) })
+                        FilterChip(from == f && to == Dates.today().toString(), { from = f; to = Dates.today().toString() }, { Text(stringResource(l)) })
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DateField(from, { from = it ?: from }, "Du", Modifier.weight(1f), clearable = false)
-                    DateField(to, { to = it ?: to }, "Au", Modifier.weight(1f), clearable = false)
+                    DateField(from, { from = it ?: from }, stringResource(R.string.report_from), Modifier.weight(1f), clearable = false)
+                    DateField(to, { to = it ?: to }, stringResource(R.string.report_to), Modifier.weight(1f), clearable = false)
                 }
                 Button(
                     onClick = {
@@ -79,14 +83,14 @@ fun ReportScreen(vm: MainViewModel) {
                         busy = true; error = null
                         scope.launch {
                             runCatching { file = c.report.generate(a, java.time.LocalDate.parse(from), java.time.LocalDate.parse(to)) }
-                                .onFailure { error = "Échec : ${it.message}" }
+                                .onFailure { error = res.getString(R.string.error_failed, it.message ?: "") }
                             busy = false
                         }
                     },
                     enabled = !busy && animal != null, modifier = Modifier.fillMaxWidth(),
-                ) { Icon(Icons.Rounded.PictureAsPdf, null); Text("  Générer le PDF") }
+                ) { Icon(Icons.Rounded.PictureAsPdf, null); Text(stringResource(R.string.report_generate), Modifier.padding(start = 8.dp)) }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                VetNote("Profil, traitements et observance, courbe respiratoire, crises avec vignettes, poids, observations.")
+                VetNote(stringResource(R.string.report_contents))
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 when {
@@ -101,7 +105,9 @@ fun ReportScreen(vm: MainViewModel) {
 /** Choix manuel de la ville (pas d'autorisation de localisation) et données du jour. */
 @Composable
 fun AirScreen(vm: MainViewModel) {
-    val c = LocalContext.current.container
+    val ctx = LocalContext.current
+    val res = LocalResources.current
+    val c = ctx.container
     val scope = rememberCoroutineScope()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val days by remember { c.db.air().observeAll() }.collectAsState(emptyList())
@@ -109,18 +115,18 @@ fun AirScreen(vm: MainViewModel) {
     var results by remember { mutableStateOf<List<City>>(emptyList()) }
     var msg by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(topBar = { BackTopBar("Pollens et qualité de l'air") }) { pad ->
+    Scaffold(topBar = { BackTopBar(stringResource(R.string.air_title)) }) { pad ->
         LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 SectionCard {
-                    Text("Ville : ${settings?.city ?: "aucune"}", style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(query, { query = it }, label = { Text("Rechercher une ville") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    Text(stringResource(R.string.air_city, settings?.city ?: stringResource(R.string.air_no_city)), style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(query, { query = it }, label = { Text(stringResource(R.string.air_search_city)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                         trailingIcon = {
-                            IconButton(onClick = { scope.launch { results = runCatching { c.air.search(query) }.getOrElse { msg = "Recherche impossible (hors ligne ?)"; emptyList() } } }) {
-                                Icon(Icons.Rounded.Search, "Rechercher")
+                            IconButton(onClick = { scope.launch { results = runCatching { c.air.search(query) }.getOrElse { msg = res.getString(R.string.air_search_failed); emptyList() } } }) {
+                                Icon(Icons.Rounded.Search, stringResource(R.string.air_search))
                             }
                         })
-                    Text("Les données sont récupérées une fois par jour et superposées à la frise des crises et de la respiration.", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.air_explain), style = MaterialTheme.typography.bodySmall)
                 }
             }
             items(results) { city ->
@@ -130,7 +136,10 @@ fun AirScreen(vm: MainViewModel) {
                         scope.launch {
                             c.settings.setCity(city.name, city.lat, city.lon)
                             results = emptyList()
-                            msg = runCatching { "${c.air.fetch(city.name, city.lat, city.lon, pastDays = 30)} jour(s) récupéré(s)." }.getOrElse { "Récupération impossible : ${it.message}" }
+                            msg = runCatching {
+                                val n = c.air.fetch(city.name, city.lat, city.lon, pastDays = 30)
+                                res.getQuantityString(R.plurals.air_days_fetched, n, n)
+                            }.getOrElse { res.getString(R.string.air_fetch_failed, it.message ?: "") }
                         }
                     },
                 )
@@ -141,15 +150,17 @@ fun AirScreen(vm: MainViewModel) {
                     leadingContent = { Icon(Icons.Rounded.Grass, null) },
                     headlineContent = { Text(Dates.fmtDay(d.date)) },
                     supportingContent = {
-                        Text(listOfNotNull(
-                            d.aqi?.let { "AQI ${it.toInt()}" },
-                            d.grass?.let { "graminées ${it.toInt()}" }, d.birch?.let { "bouleau ${it.toInt()}" }, d.alder?.let { "aulne ${it.toInt()}" },
-                            d.mugwort?.let { "armoise ${it.toInt()}" }, d.ragweed?.let { "ambroisie ${it.toInt()}" }, d.olive?.let { "olivier ${it.toInt()}" },
-                        ).joinToString(" · ") + " (grains/m³)")
+                        Text(stringResource(R.string.air_day_values, listOfNotNull(
+                            d.aqi?.let { stringResource(R.string.air_aqi, it.toInt()) },
+                            d.grass?.let { stringResource(R.string.air_grass, it.toInt()) }, d.birch?.let { stringResource(R.string.air_birch, it.toInt()) },
+                            d.alder?.let { stringResource(R.string.air_alder, it.toInt()) }, d.mugwort?.let { stringResource(R.string.air_mugwort, it.toInt()) },
+                            d.ragweed?.let { stringResource(R.string.air_ragweed, it.toInt()) }, d.olive?.let { stringResource(R.string.air_olive, it.toInt()) },
+                        ).joinToString(" · ")))
                     },
                 )
             }
-            item { Text("Source : Open-Meteo.com, données CAMS (Copernicus Atmosphere Monitoring Service), licence CC BY 4.0.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            item { Text(stringResource(R.string.air_source), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+
         }
     }
 }

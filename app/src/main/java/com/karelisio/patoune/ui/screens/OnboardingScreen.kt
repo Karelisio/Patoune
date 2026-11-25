@@ -1,5 +1,11 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -13,7 +19,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,13 +104,14 @@ fun OnboardingScreen(vm: MainViewModel) {
                 page == 0 -> IntroPage(next)
                 page == 1 -> ModePage(mode, { mode = it }, next)
                 withAnimal && page == 2 -> Column(Modifier.fillMaxSize()) {
-                    Text("Votre compagnon", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(24.dp, 16.dp, 24.dp, 0.dp))
+                    Text(stringResource(R.string.onboarding_animal), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(24.dp, 16.dp, 24.dp, 0.dp))
                     AnimalEditScreen(vm, null, onSaved = next, embedded = true)
                 }
                 else -> PermissionPage(perms[page - 2 - animalPages], last = page == pages - 1, onNext = { if (page == pages - 1) finish() else next() })
             }
         }
-        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.Center) {
+        val pageLabel = stringResource(R.string.a11y_page, pager.currentPage + 1, pages)
+        Row(Modifier.fillMaxWidth().padding(16.dp).clearAndSetSemantics { contentDescription = pageLabel }, horizontalArrangement = Arrangement.Center) {
             repeat(pages) { i ->
                 val active = i == pager.currentPage
                 Box(Modifier.padding(3.dp).height(8.dp).width(if (active) 24.dp else 8.dp).clip(PawShapes.pill)
@@ -122,40 +128,40 @@ private fun IntroPage(onNext: () -> Unit) {
     val breathe by t.animateFloat(0.92f, 1.08f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "b")
     val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(30000, easing = LinearEasing)), label = "s")
     Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Box(Modifier.size(200.dp).graphicsLayer { if (!reduce) { scaleX = breathe; scaleY = breathe; rotationZ = spin } }.clip(PawShapes.cookie)
+        // Forme animée décorative : ignorée par l'accessibilité.
+        Box(Modifier.size(200.dp).clearAndSetSemantics {}.graphicsLayer { if (!reduce) { scaleX = breathe; scaleY = breathe; rotationZ = spin } }.clip(PawShapes.cookie)
             .background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
             PawIcon(MaterialTheme.colorScheme.onPrimaryContainer, Modifier.graphicsLayer { rotationZ = if (reduce) 0f else -spin }, size = 110.dp)
         }
         Spacer(Modifier.height(32.dp))
-        Text("Patoune", style = MaterialTheme.typography.displayMedium)
-        Text("Le carnet de soins de votre animal : traitements, respiration, crises filmées, carnet de santé et rapport pour le véto.",
-            style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displayMedium)
+        Text(stringResource(R.string.onboarding_intro), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
-        Text("Tout reste sur votre téléphone. Le partage avec vos proches est une option.", style = MaterialTheme.typography.bodyMedium,
+        Text(stringResource(R.string.onboarding_intro_local), style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
         VetNote()
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onNext, Modifier.fillMaxWidth()) { Text("Commencer") }
+        Button(onClick = onNext, Modifier.fillMaxWidth()) { Text(stringResource(R.string.onboarding_start)) }
     }
 }
 
 @Composable
 private fun ModePage(mode: StartMode, onMode: (StartMode) -> Unit, onNext: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Comment utiliser Patoune ?", style = MaterialTheme.typography.headlineMedium)
-        Text("Modifiable à tout moment dans les réglages.", style = MaterialTheme.typography.bodyMedium)
-        ModeCard(Icons.Rounded.Person, "Solo", "Tout reste sur ce téléphone, sans compte ni réseau.", mode == StartMode.SOLO) { onMode(StartMode.SOLO) }
-        ModeCard(Icons.Rounded.GroupAdd, "Créer un foyer", "Partagez avec conjoint, famille ou pet-sitter (2 à 6 personnes), chiffré de bout en bout.", mode == StartMode.CREATE) { onMode(StartMode.CREATE) }
-        ModeCard(Icons.Rounded.Group, "Rejoindre un foyer", "Scannez le QR code d'un membre : ses animaux arrivent automatiquement, rien à ressaisir.", mode == StartMode.JOIN) { onMode(StartMode.JOIN) }
+        Text(stringResource(R.string.onboarding_mode_title), style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.onboarding_mode_body), style = MaterialTheme.typography.bodyMedium)
+        ModeCard(Icons.Rounded.Person, stringResource(R.string.settings_solo), stringResource(R.string.onboarding_solo_body), mode == StartMode.SOLO) { onMode(StartMode.SOLO) }
+        ModeCard(Icons.Rounded.GroupAdd, stringResource(R.string.household_create_title), stringResource(R.string.onboarding_create_body), mode == StartMode.CREATE) { onMode(StartMode.CREATE) }
+        ModeCard(Icons.Rounded.Group, stringResource(R.string.household_join_title), stringResource(R.string.onboarding_join_body), mode == StartMode.JOIN) { onMode(StartMode.JOIN) }
         Spacer(Modifier.weight(1f))
-        Button(onClick = onNext, Modifier.fillMaxWidth()) { Text("Continuer") }
+        Button(onClick = onNext, Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_continue)) }
     }
 }
 
 @Composable
 private fun ModeCard(icon: ImageVector, title: String, body: String, selected: Boolean, onClick: () -> Unit) {
     Card(
-        Modifier.fillMaxWidth().clickable(onClick = onClick),
+        Modifier.fillMaxWidth().selectable(selected = selected, onClick = onClick, role = Role.RadioButton),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
@@ -181,18 +187,21 @@ fun PermissionPage(p: AppPermission, last: Boolean, onNext: () -> Unit) {
     val t = rememberInfiniteTransition(label = "perm")
     val wobble by t.animateFloat(-8f, 8f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "w")
     Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        AnimatedContent(granted, transitionSpec = { scaleIn(spring(Spring.DampingRatioMediumBouncy)) togetherWith scaleOut() }, label = "check") { ok ->
+        AnimatedContent(granted, transitionSpec = { scaleIn(spring(Spring.DampingRatioMediumBouncy)) togetherWith scaleOut() }, label = "check",
+            modifier = Modifier.clearAndSetSemantics {}) { ok ->
             if (ok) ShapeBadge(Icons.Rounded.Check, PawShapes.sunny, MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, 140.dp)
             else ShapeBadge(p.icon, PawShapes.cookie, MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer, 140.dp,
                 Modifier.graphicsLayer { if (!reduce) rotationZ = wobble })
         }
         Spacer(Modifier.height(32.dp))
-        Text(p.title, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+        Text(stringResource(p.titleRes), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+        if (granted) Text(stringResource(R.string.perm_granted), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(8.dp))
-        Text(p.why, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+        Text(stringResource(p.whyRes), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
         Spacer(Modifier.height(32.dp))
-        if (!granted) Button(onClick = { request(p) }, Modifier.fillMaxWidth()) { Text("Autoriser") }
-        else Button(onClick = onNext, Modifier.fillMaxWidth()) { Text(if (last) "Terminer" else "Continuer") }
-        if (!granted) TextButton(onClick = onNext) { Text(if (last) "Terminer sans autoriser" else "Plus tard") }
+        if (!granted) Button(onClick = { request(p) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.perm_allow)) }
+        else Button(onClick = onNext, Modifier.fillMaxWidth()) { Text(stringResource(if (last) R.string.onboarding_finish else R.string.action_continue)) }
+        if (!granted) TextButton(onClick = onNext) { Text(stringResource(if (last) R.string.onboarding_finish_without else R.string.onboarding_later)) }
+
     }
 }

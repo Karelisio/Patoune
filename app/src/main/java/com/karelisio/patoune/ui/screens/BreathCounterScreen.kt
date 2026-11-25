@@ -1,5 +1,16 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import android.view.HapticFeedbackConstants
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedContent
@@ -108,7 +119,7 @@ fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
     var now by remember { mutableLongStateOf(0L) }
     val ripples = remember { mutableStateListOf<Long>() }
     val scale = remember { Animatable(1f) }
-    var ctx by remember { mutableStateOf(BreathContext.SLEEP) }
+    var breathCtx by remember { mutableStateOf(BreathContext.SLEEP) }
     var note by remember { mutableStateOf("") }
     var alert by remember { mutableStateOf(false) }
 
@@ -157,8 +168,15 @@ fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
 
     Box(Modifier.fillMaxSize().background(bg)) {
         if (phase != Phase.DONE) {
-            Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures(onPress = { onTap() }) }, contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxSize()) {
+            val tapLabel = stringResource(R.string.a11y_breath_tap)
+            // Zone de tap : bouton pour TalkBack (double-tap = une respiration).
+            Box(
+                Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures(onPress = { onTap() }) }
+                    .semantics { role = Role.Button; contentDescription = tapLabel; onClick(label = tapLabel) { onTap(); true } },
+                contentAlignment = Alignment.Center,
+            ) {
+                // Ondes et forme « Souffle » : décoratives, ignorées par l'accessibilité.
+                Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) {
                     ripples.forEach { start ->
                         val f = ((now - start) / 1600f).coerceIn(0f, 1f)
                         drawCircle(fg.copy(alpha = (1f - f) * if (night) 0.35f else 0.5f), radius = size.minDimension * (0.28f + 0.42f * f), center = center, style = Stroke(width = (1f - f) * 10f + 1f))
@@ -166,35 +184,54 @@ fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
                 }
                 Box(
                     Modifier.size(260.dp).graphicsLayer { scaleX = scale.value; scaleY = scale.value; rotationZ = if (reduce) 0f else spin }
-                        .clip(shape).background(blob),
+                        .clip(shape).background(blob).clearAndSetSemantics {},
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     val live = if (phase == Phase.COUNTING) Breath.liveRate(taps) else null
-                    AnimatedNumber(live?.let { Breath.format(it) } ?: taps.size.toString(), BigNumber, color = onBg)
-                    Text(if (live != null) "resp/min (estimation)" else if (phase == Phase.READY) "Touchez à chaque inspiration" else "respiration(s)",
-                        color = onBg, style = MaterialTheme.typography.titleMedium)
+                    val spoken = when {
+                        live != null -> pluralStringResource(R.plurals.a11y_breath_live, taps.size, taps.size, Breath.format(live))
+                        phase == Phase.READY -> stringResource(R.string.breath_tap_hint)
+                        else -> pluralStringResource(R.plurals.a11y_breath_count, taps.size, taps.size)
+                    }
+                    // Annonce vivante du compteur (valeur entière, pas chiffre par chiffre).
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clearAndSetSemantics {
+                        liveRegion = LiveRegionMode.Polite
+                        contentDescription = spoken
+                    }) {
+                        AnimatedNumber(live?.let { Breath.format(it) } ?: taps.size.toString(), BigNumber, color = onBg)
+                        Text(
+                            when {
+                                live != null -> stringResource(R.string.breath_live_unit)
+                                phase == Phase.READY -> stringResource(R.string.breath_tap_hint)
+                                else -> pluralStringResource(R.plurals.breath_count_unit, taps.size)
+                            },
+                            color = onBg, style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
                     if (phase == Phase.COUNTING) {
-                        val left = ((duration * 1000L - (now - startAt)) / 1000L).coerceAtLeast(0)
-                        Text("$left s", color = fg, style = MaterialTheme.typography.headlineSmall)
+                        val left = ((duration * 1000L - (now - startAt)) / 1000L).coerceAtLeast(0).toInt()
+                        Text(stringResource(R.string.duration_sec, left), color = fg, style = MaterialTheme.typography.headlineSmall)
                     }
                 }
             }
         }
         // Barre du haut.
         Row(Modifier.systemBarsPadding().padding(8.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Retour", tint = onBg) }
+            IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back), tint = onBg) }
             Text(animal?.name ?: "", color = onBg, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            IconButton(onClick = { night = !night }) { Icon(if (night) Icons.Rounded.LightMode else Icons.Rounded.Bedtime, "Mode nuit", tint = onBg) }
+            IconButton(onClick = { night = !night }) {
+                Icon(if (night) Icons.Rounded.LightMode else Icons.Rounded.Bedtime, stringResource(if (night) R.string.breath_day_mode else R.string.breath_night_mode), tint = onBg)
+            }
         }
         if (phase == Phase.READY) {
             Column(Modifier.align(Alignment.BottomCenter).systemBarsPadding().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 SingleChoiceSegmentedButtonRow {
                     Breath.durations.forEachIndexed { i, d ->
                         SegmentedButton(selected = d == duration, onClick = { duration = d; scope.launch { c.settings.setBreathDuration(d) } },
-                            shape = SegmentedButtonDefaults.itemShape(i, Breath.durations.size)) { Text("$d s") }
+                            shape = SegmentedButtonDefaults.itemShape(i, Breath.durations.size)) { Text(stringResource(R.string.duration_sec, d)) }
                     }
                 }
-                if (!night) VetNote("Comptez au repos ou pendant le sommeil, une respiration = un soulèvement du flanc.")
+                if (!night) VetNote(stringResource(R.string.breath_count_note))
             }
         }
         if (phase == Phase.DONE) {
@@ -205,18 +242,20 @@ fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Box(Modifier.padding(top = 48.dp))
-                AnimatedContent(bpm, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "res") { v ->
-                    AnimatedNumber(Breath.format(v), BigNumber, color = if (over) MaterialTheme.colorScheme.error else onBg)
+                val result = stringResource(R.string.a11y_breath_result, Breath.format(bpm))
+                AnimatedContent(bpm, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "res",
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) { v ->
+                    AnimatedNumber(Breath.format(v), BigNumber, color = if (over) MaterialTheme.colorScheme.error else onBg, description = result)
                 }
-                Text("respirations / min · ${taps.size} en $duration s", color = onBg)
-                if (over) Text("Au-dessus du seuil fixé avec le véto (${animal?.breathThreshold}).", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
-                ChoiceChips(BreathContext.entries, ctx, { it.label }) { ctx = it }
-                Field(note, { note = it }, "Note")
+                Text(pluralStringResource(R.plurals.breath_result_detail, taps.size, taps.size, duration), color = onBg)
+                if (over) Text(stringResource(R.string.breath_over_threshold_short, animal?.breathThreshold ?: 0), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
+                ChoiceChips(BreathContext.entries, breathCtx, { stringResource(it.labelRes) }) { breathCtx = it }
+                Field(note, { note = it }, stringResource(R.string.obs_note))
                 Button(
                     onClick = {
                         val a = animal ?: return@Button
                         scope.launch {
-                            val saved = c.store.save(BreathCount(animalId = a.id, at = startAt, taps = taps.size, durationSec = duration, bpm = bpm, context = ctx, note = note))
+                            val saved = c.store.save(BreathCount(animalId = a.id, at = startAt, taps = taps.size, durationSec = duration, bpm = bpm, context = breathCtx, note = note))
                             alert = BreathAlerts.check(c, a, saved)
                             c.hooks.onDataChanged()
                             nav.popBackStack()
@@ -224,8 +263,9 @@ fun BreathCounterScreen(vm: MainViewModel, nightStart: Boolean) {
                     },
                     colors = if (night) ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1410), contentColor = Color(0xFF9A6A60)) else ButtonDefaults.buttonColors(),
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Enregistrer") }
-                OutlinedButton(onClick = { phase = Phase.READY; taps.clear() }, modifier = Modifier.fillMaxWidth()) { Text("Recommencer", color = onBg) }
+                ) { Text(stringResource(R.string.action_save)) }
+                OutlinedButton(onClick = { phase = Phase.READY; taps.clear() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.breath_restart), color = onBg) }
+
             }
         }
     }

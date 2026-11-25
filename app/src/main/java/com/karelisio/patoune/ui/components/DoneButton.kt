@@ -1,5 +1,12 @@
 package com.karelisio.patoune.ui.components
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -59,7 +66,7 @@ private fun RoundedPolygon.normalizedCircle() = RoundedPolygon.circle(numVertice
  * puis en coche, avec un ressort et un retour haptique.
  */
 @Composable
-fun DoneButton(done: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, label: String = "Donné") {
+fun DoneButton(done: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, label: String = stringResource(R.string.dose_given)) {
     val haptic = LocalHapticFeedback.current
     val reduce = rememberReduceMotion()
     val scope = rememberCoroutineScope()
@@ -75,20 +82,30 @@ fun DoneButton(done: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier
     val shape = if (p <= 1f) MorphShape(pillToPad, p.coerceIn(0f, 1f)) else MorphShape(padToCircle, (p - 1f).coerceIn(0f, 1f))
     val t = (p / 2f).coerceIn(0f, 1f)
     val colors = MaterialTheme.colorScheme
+    val description = stringResource(if (done) R.string.a11y_already_given else R.string.a11y_mark_given)
+    val give = {
+        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+        scope.launch { onClick() }
+        Unit
+    }
     Box(
         modifier
             .height(56.dp)
             .width(lerp(128.dp, 56.dp, t))
             .clip(shape)
             .background(if (p > 0.5f) colors.tertiaryContainer else colors.primary)
-            .clickable(enabled = !done, role = Role.Button) {
-                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                scope.launch { onClick() }
+            .clickable(enabled = !done, role = Role.Button, onClick = give)
+            // Une seule annonce claire, quelle que soit l'étape du morphing.
+            .clearAndSetSemantics {
+                role = Role.Button
+                contentDescription = description
+                if (done) disabled() else onClick(label = description) { give(); true }
             },
         contentAlignment = Alignment.Center,
     ) {
         if (p < 0.6f) Text(label, color = colors.onPrimary, style = MaterialTheme.typography.labelLarge, modifier = Modifier.graphicsLayer { alpha = 1f - p / 0.6f })
-        else Icon(Icons.Rounded.Check, "Donné", tint = colors.onTertiaryContainer, modifier = Modifier.size(28.dp).graphicsLayer {
+        else Icon(Icons.Rounded.Check, null, tint = colors.onTertiaryContainer, modifier = Modifier.size(28.dp).graphicsLayer {
+
             val a = ((p - 0.6f) / 1.4f).coerceIn(0f, 1f); alpha = a; scaleX = 0.6f + 0.4f * a; scaleY = scaleX
         })
     }

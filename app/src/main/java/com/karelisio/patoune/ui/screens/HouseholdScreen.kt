@@ -1,5 +1,8 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,6 +80,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HouseholdScreen(vm: MainViewModel) {
     val ctx = LocalContext.current
+    val res = LocalResources.current
     val c = ctx.container
     val scope = rememberCoroutineScope()
     val settings by vm.settings.collectAsStateWithLifecycle()
@@ -95,7 +100,7 @@ fun HouseholdScreen(vm: MainViewModel) {
     fun run(block: suspend () -> Unit) {
         busy = true; error = null
         scope.launch {
-            runCatching { block() }.onFailure { error = "Échec : ${it.message ?: it::class.simpleName}" }
+            runCatching { block() }.onFailure { error = res.getString(R.string.error_failed, it.message ?: it::class.simpleName.orEmpty()) }
             busy = false
         }
     }
@@ -104,74 +109,73 @@ fun HouseholdScreen(vm: MainViewModel) {
     val cameraPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { if (it) scanning = true }
     fun joinWith(text: String) {
         val inv = Invitation.parse(text, server)
-        if (inv == null) { error = "Code d'invitation illisible."; return }
+        if (inv == null) { error = res.getString(R.string.household_bad_code); return }
         run { c.household.join(inv, name.trim()) }
     }
 
-    Scaffold(topBar = { BackTopBar(if (s.shared) "Foyer partagé" else "Partager avec mes proches") }) { pad ->
+    Scaffold(topBar = { BackTopBar(stringResource(if (s.shared) R.string.settings_shared else R.string.household_share_title)) }) { pad ->
         LazyColumn(Modifier.padding(pad).imePadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (!s.shared) {
                 item {
                     SectionCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             ShapeBadge(Icons.Rounded.Group, PawShapes.clover, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
-                            Text("  Vous êtes en mode solo", style = MaterialTheme.typography.titleLarge)
+                            Text(stringResource(R.string.household_solo_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 12.dp))
                         }
-                        Text("Un foyer réunit 2 à 6 personnes (conjoint, famille, pet-sitter) autour des mêmes animaux : on voit qui a donné quoi, les doubles doses sont évitées. " +
-                            "Tout est chiffré sur le téléphone ; la clé du foyer passe uniquement par le QR code.", style = MaterialTheme.typography.bodyMedium)
-                        Field(name, { name = it }, "Votre prénom (visible des membres)")
+                        Text(stringResource(R.string.household_solo_body), style = MaterialTheme.typography.bodyMedium)
+                        Field(name, { name = it }, stringResource(R.string.household_your_name))
                     }
                 }
                 item {
                     SectionCard {
-                        Text("Créer un foyer", style = MaterialTheme.typography.titleMedium)
-                        Text("Vos données actuelles seront chiffrées et envoyées dans le nouveau foyer.", style = MaterialTheme.typography.bodyMedium)
-                        Button(onClick = { run { c.household.create(name.trim(), server.trim()) } }, enabled = !busy && name.isNotBlank() && server.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Créer le foyer") }
+                        Text(stringResource(R.string.household_create_title), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.household_create_body), style = MaterialTheme.typography.bodyMedium)
+                        Button(onClick = { run { c.household.create(name.trim(), server.trim()) } }, enabled = !busy && name.isNotBlank() && server.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.household_create)) }
                     }
                 }
                 item {
                     SectionCard {
-                        Text("Rejoindre un foyer", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.household_join_title), style = MaterialTheme.typography.titleMedium)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilledTonalButton(onClick = { cameraPerm.launch(Manifest.permission.CAMERA) }, enabled = !busy && name.isNotBlank(), modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Rounded.QrCodeScanner, null); Text("  Scanner")
+                                Icon(Icons.Rounded.QrCodeScanner, null); Text(stringResource(R.string.household_scan), Modifier.padding(start = 8.dp))
                             }
-                            OutlinedButton(onClick = { codeEntry = true }, enabled = !busy && name.isNotBlank(), modifier = Modifier.weight(1f)) { Text("Saisir le code") }
+                            OutlinedButton(onClick = { codeEntry = true }, enabled = !busy && name.isNotBlank(), modifier = Modifier.weight(1f)) { Text(stringResource(R.string.household_enter_code)) }
                         }
                     }
                 }
-                item { Field(server, { server = it }, "Serveur (avancé)") }
+                item { Field(server, { server = it }, stringResource(R.string.household_server)) }
             } else {
                 item {
                     SectionCard {
-                        Text("Vous : ${s.memberName}" + if (s.isCreator) " · créateur du foyer" else "", style = MaterialTheme.typography.titleMedium)
-                        Text(if (s.lastSyncAt > 0) "Dernière synchronisation : ${Dates.fmtDayTime(s.lastSyncAt)}" else "Pas encore synchronisé", style = MaterialTheme.typography.bodyMedium)
-                        if (pending > 0) Text("$pending modification(s) en attente d'envoi", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(if (s.isCreator) R.string.household_you_creator else R.string.household_you, s.memberName), style = MaterialTheme.typography.titleMedium)
+                        Text(if (s.lastSyncAt > 0) stringResource(R.string.household_last_sync, Dates.fmtDayTime(s.lastSyncAt)) else stringResource(R.string.household_never_synced), style = MaterialTheme.typography.bodyMedium)
+                        if (pending > 0) Text(pluralStringResource(R.plurals.household_pending, pending, pending), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilledTonalButton(onClick = { run { c.sync.sync() } }, enabled = !busy) { Icon(Icons.Rounded.Sync, null); Text("  Synchroniser") }
-                            if (members.size < 6) Button(onClick = { run { invitation = c.household.invite() } }, enabled = !busy) { Icon(Icons.Rounded.QrCode2, null); Text("  Inviter") }
+                            FilledTonalButton(onClick = { run { c.sync.sync() } }, enabled = !busy) { Icon(Icons.Rounded.Sync, null); Text(stringResource(R.string.household_sync), Modifier.padding(start = 8.dp)) }
+                            if (members.size < 6) Button(onClick = { run { invitation = c.household.invite() } }, enabled = !busy) { Icon(Icons.Rounded.QrCode2, null); Text(stringResource(R.string.household_invite), Modifier.padding(start = 8.dp)) }
                         }
                     }
                 }
-                item { Text("Membres (${members.size}/6)", style = MaterialTheme.typography.titleMedium) }
+                item { Text(stringResource(R.string.household_members, members.size, 6), style = MaterialTheme.typography.titleMedium) }
                 items(members, key = { it.first.id }) { (m, n) ->
                     ListItem(
-                        headlineContent = { Text(n + if (m.id == s.memberId) " (vous)" else "") },
-                        supportingContent = { Text("Depuis le ${Dates.fmtDay(m.joinedAt)}") },
-                        leadingContent = { if (m.isCreator) Icon(Icons.Rounded.Star, "Créateur") },
+                        headlineContent = { Text(if (m.id == s.memberId) stringResource(R.string.household_member_you, n) else n) },
+                        supportingContent = { Text(stringResource(R.string.household_member_since, Dates.fmtDay(m.joinedAt))) },
+                        leadingContent = { if (m.isCreator) Icon(Icons.Rounded.Star, stringResource(R.string.household_creator)) },
                         trailingContent = {
-                            if (s.isCreator && m.id != s.memberId) IconButton(onClick = { confirmRemove = m to n }) { Icon(Icons.Rounded.PersonRemove, "Retirer") }
+                            if (s.isCreator && m.id != s.memberId) IconButton(onClick = { confirmRemove = m to n }) { Icon(Icons.Rounded.PersonRemove, stringResource(R.string.household_remove_named, n)) }
                         },
                     )
                 }
                 item {
                     SectionCard {
-                        Text("Notifications du foyer", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.household_notifications), style = MaterialTheme.typography.titleMedium)
                         PushType.entries.forEach { t ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(t.label, style = MaterialTheme.typography.bodyLarge)
-                                    Text(t.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(t.labelRes), style = MaterialTheme.typography.bodyLarge)
+                                    Text(stringResource(t.descriptionRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Switch(t in s.pushEnabled, { on -> scope.launch { c.settings.setPush(if (on) s.pushEnabled + t else s.pushEnabled - t) } })
                             }
@@ -180,15 +184,15 @@ fun HouseholdScreen(vm: MainViewModel) {
                 }
                 item {
                     SectionCard {
-                        Text("Stockage des médias", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.household_storage), style = MaterialTheme.typography.titleMedium)
                         val max = s.quotaMax.takeIf { it > 0 }
-                        Text(if (max != null) "${mb(s.quotaUsed)} utilisés sur ${mb(max)} (200 Mo max par média)" else "Quota inconnu (synchronisez)")
+                        Text(if (max != null) stringResource(R.string.household_quota, mb(ctx, s.quotaUsed), mb(ctx, max)) else stringResource(R.string.household_quota_unknown))
                         if (max != null) LinearProgressIndicator(progress = { (s.quotaUsed.toFloat() / max).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                     }
                 }
                 item {
                     TextButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Quitter le foyer (garder une copie locale)", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.household_leave_button), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -199,7 +203,7 @@ fun HouseholdScreen(vm: MainViewModel) {
 
     if (scanning) ModalBottomSheet(onDismissRequest = { scanning = false }) {
         Column(Modifier.padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Scannez le QR code affiché par un membre", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.household_scan_title), style = MaterialTheme.typography.titleMedium)
             QrScanner(Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.extraLarge)) { text -> scanning = false; joinWith(text) }
         }
     }
@@ -207,42 +211,47 @@ fun HouseholdScreen(vm: MainViewModel) {
         var code by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { codeEntry = false },
-            title = { Text("Code d'invitation") },
-            text = { Field(code, { code = it }, "XXXX-XXXX-…", minLines = 3) },
-            confirmButton = { TextButton(onClick = { codeEntry = false; joinWith(code) }) { Text("Rejoindre") } },
-            dismissButton = { TextButton(onClick = { codeEntry = false }) { Text("Annuler") } },
+            title = { Text(stringResource(R.string.household_code_title)) },
+            text = { Field(code, { code = it }, stringResource(R.string.household_code_hint), minLines = 3) },
+            confirmButton = { TextButton(onClick = { codeEntry = false; joinWith(code) }) { Text(stringResource(R.string.household_join)) } },
+            dismissButton = { TextButton(onClick = { codeEntry = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
     invitation?.let { inv ->
         ModalBottomSheet(onDismissRequest = { invitation = null; SyncWorker.now(ctx) }) {
             Column(Modifier.padding(24.dp).navigationBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Invitation (valable 15 min, usage unique)", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.household_invitation_title), style = MaterialTheme.typography.titleMedium)
                 val bmp = remember(inv) { Qr.encode(inv.toQr()) }
                 Box(Modifier.fillMaxWidth(0.8f).aspectRatio(1f).clip(PawShapes.cookie).background(Color.White).padding(28.dp)) {
-                    Image(bmp.asImageBitmap(), "QR code d'invitation", Modifier.fillMaxWidth().aspectRatio(1f))
+                    Image(bmp.asImageBitmap(), stringResource(R.string.household_qr), Modifier.fillMaxWidth().aspectRatio(1f))
                 }
-                Text("Code de secours", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.household_backup_code), style = MaterialTheme.typography.labelLarge)
                 Text(inv.shortCode(), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium)
-                Text("Ce code contient la clé du foyer : ne le partagez qu'avec la personne invitée.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.household_backup_code_warning), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
     confirmRemove?.let { (m, n) ->
         AlertDialog(
             onDismissRequest = { confirmRemove = null },
-            title = { Text("Retirer $n ?") },
-            text = { Text("$n n'aura plus accès au foyer. Une nouvelle clé est générée et transmise aux autres membres.") },
-            confirmButton = { TextButton(onClick = { confirmRemove = null; run { c.household.remove(m.id); members = c.household.members() } }) { Text("Retirer") } },
-            dismissButton = { TextButton(onClick = { confirmRemove = null }) { Text("Annuler") } },
+            title = { Text(stringResource(R.string.household_remove_q, n)) },
+            text = { Text(stringResource(R.string.household_remove_body, n)) },
+            confirmButton = { TextButton(onClick = { confirmRemove = null; run { c.household.remove(m.id); members = c.household.members() } }) { Text(stringResource(R.string.action_remove)) } },
+            dismissButton = { TextButton(onClick = { confirmRemove = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
     if (confirmLeave) AlertDialog(
         onDismissRequest = { confirmLeave = false },
-        title = { Text("Quitter le foyer ?") },
-        text = { Text("Vous repassez en mode solo avec une copie complète des données et des médias sur ce téléphone.") },
-        confirmButton = { TextButton(onClick = { confirmLeave = false; run { c.household.leave() } }) { Text("Quitter") } },
-        dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Annuler") } },
+        title = { Text(stringResource(R.string.household_leave_q)) },
+        text = { Text(stringResource(R.string.household_leave_body)) },
+        confirmButton = { TextButton(onClick = { confirmLeave = false; run { c.household.leave() } }) { Text(stringResource(R.string.household_leave)) } },
+        dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
-private fun mb(b: Long) = if (b >= 1 shl 30) "%.1f Go".format(b / 1073741824.0) else "%.0f Mo".format(b / 1048576.0)
+/** Taille lisible (unités binaires, comme les limites du Worker) avec les unités traduites (Mo / MB…). */
+private fun mb(ctx: android.content.Context, b: Long): String =
+    if (b >= 1 shl 30) ctx.getString(R.string.size_gb, "%.1f".format(b / 1073741824.0))
+    else ctx.getString(R.string.size_mb, "%.0f".format(b / 1048576.0))
+
+

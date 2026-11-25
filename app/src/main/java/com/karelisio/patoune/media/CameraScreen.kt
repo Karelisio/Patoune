@@ -1,5 +1,11 @@
 package com.karelisio.patoune.media
 
+import androidx.compose.ui.semantics.semantics
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -138,30 +144,43 @@ fun CameraScreen(video: Boolean, animalId: String, attach: AttachType, attachId:
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (hasCamera) AndroidView({ PreviewView(it).apply { this.controller = controller } }, Modifier.fillMaxSize())
-        else Text("Autorisez la caméra pour filmer ou photographier.", color = Color.White, modifier = Modifier.align(Alignment.Center).padding(32.dp))
+        else Text(stringResource(R.string.camera_permission), color = Color.White, modifier = Modifier.align(Alignment.Center).padding(32.dp))
         Row(Modifier.systemBarsPadding().padding(8.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { recording?.stop(); onDone(null) }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Retour", tint = Color.White) }
+            IconButton(onClick = { recording?.stop(); onDone(null) }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
             Box(Modifier.weight(1f))
             if (recording != null) {
-                Box(Modifier.clip(RoundedCornerShape(50)).background(Color(0xCCB3261E)).padding(horizontal = 12.dp, vertical = 6.dp)) {
-                    Text("● %d:%02d".format(elapsed / 60000, (elapsed / 1000) % 60), color = Color.White, style = MaterialTheme.typography.titleMedium)
+                val clock = "%d:%02d".format(elapsed / 60000, (elapsed / 1000) % 60)
+                val recLabel = stringResource(R.string.a11y_camera_recording, clock)
+                Box(Modifier.clip(RoundedCornerShape(50)).background(Color(0xCCB3261E)).padding(horizontal = 12.dp, vertical = 6.dp)
+                    .clearAndSetSemantics { contentDescription = recLabel }) {
+                    Text("● $clock", color = Color.White, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
         Column(Modifier.align(Alignment.BottomCenter).systemBarsPadding().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (processing) {
                 CircularWavyProgressIndicator()
-                Text(if (video) "Compression en 720p…" else "Enregistrement…", color = Color.White)
+                Text(stringResource(if (video) R.string.camera_compressing else R.string.camera_saving), color = Color.White)
             } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(32.dp)) {
                 Box(Modifier.size(48.dp))
                 val inner by animateDpAsState(if (recording != null) 28.dp else 64.dp, label = "shutter")
-                Box(Modifier.size(80.dp).border(4.dp, Color.White, CircleShape).clickable(enabled = hasCamera) { shutter() }, contentAlignment = Alignment.Center) {
+                val shutterLabel = stringResource(
+                    when {
+                        !video -> R.string.camera_take_photo
+                        recording != null -> R.string.camera_stop
+                        else -> R.string.camera_start
+                    },
+                )
+                Box(Modifier.size(80.dp).border(4.dp, Color.White, CircleShape)
+                    .clickable(enabled = hasCamera, onClickLabel = shutterLabel, role = Role.Button) { shutter() }
+                    .semantics { contentDescription = shutterLabel }, contentAlignment = Alignment.Center) {
                     Box(Modifier.size(inner).clip(if (recording != null) RoundedCornerShape(8.dp) else CircleShape).background(if (video) Color(0xFFE53935) else Color.White))
                 }
                 IconButton(onClick = {
                     controller.cameraSelector = if (controller.cameraSelector == androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA)
                         androidx.camera.core.CameraSelector.DEFAULT_FRONT_CAMERA else androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
-                }, enabled = recording == null) { Icon(Icons.Rounded.Cameraswitch, "Changer de caméra", tint = Color.White) }
+                }, enabled = recording == null) { Icon(Icons.Rounded.Cameraswitch, stringResource(R.string.camera_switch), tint = Color.White) }
+
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -57,7 +59,7 @@ fun BackTopBar(title: String, actions: @Composable () -> Unit = {}) {
     val nav = LocalNav.current
     TopAppBar(
         title = { Text(title) },
-        navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Retour") } },
+        navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } },
         actions = { actions() },
     )
 }
@@ -67,28 +69,29 @@ fun SettingsScreen(vm: MainViewModel) {
     val nav = LocalNav.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val st = settings ?: return
-    Scaffold(topBar = { BackTopBar("Réglages") }) { pad ->
+    Scaffold(topBar = { BackTopBar(stringResource(R.string.settings_title)) }) { pad ->
         LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            item { SettingsHeader("Mode") }
+            item { SettingsHeader(stringResource(R.string.settings_mode)) }
             item {
                 SettingsItem(
-                    if (st.shared) "Foyer partagé" else "Solo",
-                    if (st.shared) "Membres, invitations, notifications, quota" else "Tout reste sur ce téléphone. Touchez pour partager avec vos proches.",
+                    stringResource(if (st.shared) R.string.settings_shared else R.string.settings_solo),
+                    stringResource(if (st.shared) R.string.settings_shared_sub else R.string.settings_solo_sub),
                     if (st.shared) Icons.Rounded.Group else Icons.Rounded.Person,
                 ) { nav.navigate(Routes.Household) }
             }
-            item { SettingsHeader("Suivi") }
-            item { SettingsItem("Animaux", "Ordre, modification, suppression", Icons.Rounded.Pets) { nav.navigate(Routes.Animals) } }
-            item { SettingsItem("Rapport pour le véto", "PDF sur une période choisie", Icons.Rounded.PictureAsPdf) { nav.navigate(Routes.Report) } }
-            item { SettingsItem("Pollens et qualité de l'air", st.city ?: "Choisir une ville", Icons.Rounded.Grass) { nav.navigate(Routes.Air) } }
-            item { SettingsHeader("Données") }
-            item { SettingsItem("Sauvegarde chiffrée", "Exporter ou importer (.zip avec les médias)", Icons.Rounded.Backup) { nav.navigate(Routes.Backup) } }
-            item { SettingsItem("Autorisations", "Notifications, alarmes, caméra, batterie…", Icons.Rounded.Security) { nav.navigate(Routes.Permissions) } }
-            item { SettingsHeader("À propos") }
+            item { SettingsHeader(stringResource(R.string.settings_tracking)) }
+            item { SettingsItem(stringResource(R.string.settings_animals), stringResource(R.string.settings_animals_sub), Icons.Rounded.Pets) { nav.navigate(Routes.Animals) } }
+            item { SettingsItem(stringResource(R.string.report_title), stringResource(R.string.settings_report_sub), Icons.Rounded.PictureAsPdf) { nav.navigate(Routes.Report) } }
+            item { SettingsItem(stringResource(R.string.air_title), st.city ?: stringResource(R.string.settings_air_sub), Icons.Rounded.Grass) { nav.navigate(Routes.Air) } }
+            item { SettingsHeader(stringResource(R.string.settings_data)) }
+            item { SettingsItem(stringResource(R.string.backup_title), stringResource(R.string.settings_backup_sub), Icons.Rounded.Backup) { nav.navigate(Routes.Backup) } }
+            item { SettingsItem(stringResource(R.string.permissions_title), stringResource(R.string.settings_permissions_sub), Icons.Rounded.Security) { nav.navigate(Routes.Permissions) } }
+            item { SettingsHeader(stringResource(R.string.settings_about)) }
             item {
-                SettingsItem("Rechercher une mise à jour", "Version ${BuildConfig.VERSION_NAME}", Icons.Rounded.SystemUpdate) { vm.checkUpdate(force = true) }
+                SettingsItem(stringResource(R.string.settings_update), stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), Icons.Rounded.SystemUpdate) { vm.checkUpdate(force = true) }
             }
-            item { VetNote("Patoune aide au suivi et n'est pas un avis médical. Les seuils d'alerte sont ceux fixés avec votre véto.") }
+            item { VetNote(stringResource(R.string.settings_disclaimer)) }
+
         }
     }
 }

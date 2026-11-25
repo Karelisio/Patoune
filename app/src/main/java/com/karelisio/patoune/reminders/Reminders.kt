@@ -1,5 +1,6 @@
 package com.karelisio.patoune.reminders
 
+import com.karelisio.patoune.R
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -135,7 +136,8 @@ class ReminderReceiver : BroadcastReceiver() {
                 if (doses.alreadyGiven(med) == null && doses.isLate(med, scheduled)) {
                     ReminderNotifications.show(context, med, scheduled, late = true)
                     val animal = c.db.animals().byId(med.animalId)?.name.orEmpty()
-                    c.hooks.onPush(PushType.LATE, "En retard : ${med.name}", "Pour $animal, prévu à ${Dates.fmtTime(scheduled)}, pas encore marqué.", med.id)
+                    c.hooks.onPush(PushType.LATE, context.getString(R.string.push_late_title, med.name),
+                        context.getString(R.string.push_late_body, animal, Dates.fmtTime(scheduled)), med.id)
                 }
             }
             ReminderScheduler.ACTION_GIVEN, ReminderScheduler.ACTION_GIVEN_CONFIRMED -> {
@@ -156,11 +158,12 @@ class ReminderReceiver : BroadcastReceiver() {
     }
 
     private fun showDoubleDose(context: Context, med: Medication, scheduled: Long, r: DoseResult.AlreadyGiven) {
-        val who = r.by.takeIf { it.isNotBlank() }?.let { " par $it" } ?: ""
-        val n = Notif.builder(context, Notif.CH_REMINDERS, "Déjà donné ?", "${med.name} a déjà été marqué à ${Dates.fmtTime(r.at)}$who. Confirmer une nouvelle prise ?")
+        val text = if (r.by.isNotBlank()) context.getString(R.string.notif_double_body_by, med.name, Dates.fmtTime(r.at), r.by)
+        else context.getString(R.string.notif_double_body, med.name, Dates.fmtTime(r.at))
+        val n = Notif.builder(context, Notif.CH_REMINDERS, context.getString(R.string.med_double_title), text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .addAction(0, "Confirmer quand même", ReminderNotifications.action(context, ReminderScheduler.ACTION_GIVEN_CONFIRMED, med.id, scheduled))
-            .addAction(0, "Annuler", ReminderNotifications.action(context, ReminderScheduler.ACTION_DISMISS, med.id, scheduled))
+            .addAction(0, context.getString(R.string.notif_confirm_anyway), ReminderNotifications.action(context, ReminderScheduler.ACTION_GIVEN_CONFIRMED, med.id, scheduled))
+            .addAction(0, context.getString(R.string.action_cancel), ReminderNotifications.action(context, ReminderScheduler.ACTION_DISMISS, med.id, scheduled))
         Notif.post(context, ReminderScheduler.notifId(med.id), n)
     }
 }
@@ -169,14 +172,16 @@ class ReminderReceiver : BroadcastReceiver() {
 object ReminderNotifications {
     suspend fun show(context: Context, med: Medication, scheduled: Long, late: Boolean) {
         val animal = context.container.db.animals().byId(med.animalId)?.name ?: ""
-        val title = if (late) "En retard : ${med.name} pour $animal" else "${med.name} pour $animal"
-        val text = "${med.dose.ifBlank { med.type.label }} · prévu à ${Dates.fmtTime(scheduled)}" + if (late) " · pas encore marqué" else ""
+        val title = context.getString(if (late) R.string.reminder_title_late else R.string.reminder_title, med.name, animal)
+        val dose = med.dose.ifBlank { context.getString(med.type.labelRes) }
+        val text = context.getString(if (late) R.string.reminder_text_late else R.string.reminder_text, dose, Dates.fmtTime(scheduled))
         val n = Notif.builder(context, if (med.alarmStyle) Notif.CH_ALARM else Notif.CH_REMINDERS, title, text)
             .setCategory(if (med.alarmStyle) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
             .setPriority(if (med.alarmStyle) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
-            .addAction(0, "Donné", action(context, ReminderScheduler.ACTION_GIVEN, med.id, scheduled))
-            .addAction(0, "Reporter 15 min", action(context, ReminderScheduler.ACTION_SNOOZE, med.id, scheduled))
-            .addAction(0, "Sauté", action(context, ReminderScheduler.ACTION_SKIP, med.id, scheduled))
+            .addAction(0, context.getString(R.string.dose_given), action(context, ReminderScheduler.ACTION_GIVEN, med.id, scheduled))
+            .addAction(0, context.getString(R.string.reminder_snooze), action(context, ReminderScheduler.ACTION_SNOOZE, med.id, scheduled))
+            .addAction(0, context.getString(R.string.dose_skipped), action(context, ReminderScheduler.ACTION_SKIP, med.id, scheduled))
+
         if (med.alarmStyle) {
             val full = ReminderAlarmActivity.pendingIntent(context, med.id, scheduled, late)
             n.setFullScreenIntent(full, true).setContentIntent(full).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

@@ -1,5 +1,13 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.data.CrisisTypes
+import com.karelisio.patoune.ui.stableLabel
+import com.karelisio.patoune.ui.InsightsText
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -42,7 +50,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -61,6 +68,7 @@ import java.util.Locale
 /** Carte repliable « Analyse » en tête de la liste des crises (12 derniers mois). */
 @Composable
 fun InsightsCard(crises: List<Crisis>, breaths: List<BreathCount>, air: List<AirDay>, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
     val s = remember(crises, breaths, air) { Insights.lastYear(crises, breaths, air, Dates.zone(), Dates.today()) }
     val reduce = rememberReduceMotion()
     var open by rememberSaveable { mutableStateOf(false) }
@@ -70,10 +78,10 @@ fun InsightsCard(crises: List<Crisis>, breaths: List<BreathCount>, air: List<Air
             Icon(Icons.Rounded.Insights, null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Analyse", style = MaterialTheme.typography.titleMedium)
-                Text("${s.total} crise(s) sur 12 mois", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.insights_title), style = MaterialTheme.typography.titleMedium)
+                Text(pluralStringResource(R.plurals.insights_total, s.total, s.total), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.Rounded.ExpandMore, if (open) "Replier l'analyse" else "Déplier l'analyse", Modifier.rotate(turn))
+            Icon(Icons.Rounded.ExpandMore, stringResource(if (open) R.string.insights_collapse else R.string.insights_expand), Modifier.rotate(turn))
         }
         AnimatedVisibility(
             open,
@@ -81,20 +89,19 @@ fun InsightsCard(crises: List<Crisis>, breaths: List<BreathCount>, air: List<Air
             exit = if (reduce) ExitTransition.None else shrinkVertically() + fadeOut(),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Crises par mois", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.insights_per_month), style = MaterialTheme.typography.labelLarge)
                 MonthBars(s.months, reduce)
                 if (s.triggers.isNotEmpty()) {
-                    Text("Déclencheurs notés", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.insights_triggers), style = MaterialTheme.typography.labelLarge)
                     CountChips(s.triggers)
                 }
                 if (s.types.isNotEmpty()) {
-                    Text("Types de crise", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.insights_types), style = MaterialTheme.typography.labelLarge)
                     CountChips(s.types)
                 }
-                Text("Comparaisons", style = MaterialTheme.typography.labelLarge)
-                listOf(Insights.pollenSentence(s.pollen), Insights.aqiSentence(s.aqi), Insights.breathSentence(s.breathByPollen), Insights.dayPartSentence(s))
-                    .forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
-                VetNote("Corrélation n'est pas causalité : à discuter avec votre véto.")
+                Text(stringResource(R.string.insights_comparisons), style = MaterialTheme.typography.labelLarge)
+                InsightsText.sentences(ctx, s).forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                VetNote(stringResource(R.string.insights_vet_note))
             }
         }
     }
@@ -105,7 +112,7 @@ private fun CountChips(list: List<Insights.Share>) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         list.forEach { sh ->
             Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer) {
-                Text("${sh.label} · ${sh.count}", Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.pair_dot, stableLabel(CrisisTypes.labels, sh.label), sh.count.toString()), Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -120,8 +127,8 @@ private fun MonthBars(months: List<Insights.MonthCount>, reduce: Boolean) {
     val grow = remember(months) { Animatable(if (reduce) 1f else 0f) }
     LaunchedEffect(grow) { grow.animateTo(1f, tween(700)) }
     val max = (months.maxOfOrNull { it.count } ?: 0).coerceAtLeast(1)
-    val desc = months.joinToString(", ") { "${Insights.fmtMonth(it.month)} : ${it.count}" }
-    Canvas(Modifier.fillMaxWidth().height(110.dp).semantics { contentDescription = "Crises par mois. $desc" }) {
+    val desc = stringResource(R.string.a11y_insights_bars, InsightsText.months(LocalContext.current, months))
+    Canvas(Modifier.fillMaxWidth().height(110.dp).clearAndSetSemantics { contentDescription = desc }) {
         if (months.isEmpty()) return@Canvas
         val textH = 14.sp.toPx()
         val top = textH; val bottom = size.height - textH
@@ -137,7 +144,8 @@ private fun MonthBars(months: List<Insights.MonthCount>, reduce: Boolean) {
             } else {
                 drawLine(colors.outlineVariant, Offset(x, bottom - 1f), Offset(x + barW, bottom - 1f), 2.dp.toPx())
             }
-            val initial = m.month.month.getDisplayName(java.time.format.TextStyle.NARROW, Locale.FRENCH).uppercase(Locale.FRENCH)
+            val initial = m.month.month.getDisplayName(java.time.format.TextStyle.NARROW, Locale.getDefault()).uppercase(Locale.getDefault())
+
             val l = measurer.measure(initial, label)
             drawText(l, topLeft = Offset(i * slot + (slot - l.size.width) / 2, bottom + 2f))
         }

@@ -1,5 +1,6 @@
 package com.karelisio.patoune.sync
 
+import com.karelisio.patoune.R
 import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -25,7 +26,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             val c = applicationContext.container
             c.settings.leaveHousehold()
             com.karelisio.patoune.reminders.Notif.simple(applicationContext, com.karelisio.patoune.reminders.Notif.CH_HOUSEHOLD, 401,
-                "Foyer quitté", "Vous ne faites plus partie du foyer. Patoune repasse en solo avec toutes vos données.")
+                applicationContext.getString(R.string.notif_removed_title), applicationContext.getString(R.string.notif_removed_body))
+
             Result.failure()
         } else Result.retry()
     } catch (_: Exception) {

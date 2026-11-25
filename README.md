@@ -18,6 +18,9 @@ le partage avec d'autres personnes (conjoint, famille, pet-sitter) est une optio
 - **Observations rapides**, **pollens et qualité de l'air** (Open-Meteo, ville choisie à la main), **rapport PDF**,
   **fiche urgence** (appel en un tap, raccourci d'appli), **sauvegarde chiffrée** (.zip + mot de passe, médias inclus).
 - Widget (prochain médicament + « Donné », dernière fréquence, « Compter »), tuile Réglages rapides, mise à jour in-app.
+- **Langues** : français (par défaut) et anglais, selon la langue du téléphone (dates et nombres au format local).
+  Accessibilité TalkBack : libellés des boutons et icônes, compteur respiratoire annoncé, graphiques résumés.
+
 
 ## Étapes manuelles
 1. **Secrets GitHub** (déjà créés) : `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`,
@@ -57,6 +60,10 @@ le partage avec d'autres personnes (conjoint, famille, pet-sitter) est une optio
 - **Comptage auto** : différence de luminance (grille 24×24 sur la zone) par rapport à la première image, à 10 i/s,
   puis détection de pics ; toujours présenté comme une estimation à valider.
 - **Import de sauvegarde** : fusion (rien n'est effacé), même règle que la sync.
+- **Traduction** : les valeurs stockées et synchronisées (options d'observation, types et déclencheurs de crise, espèce, sexe)
+  restent des clés françaises ; seul l'affichage est traduit (repli sur la valeur brute si inconnue). Les textes rédigés
+  au moment de l'action (historique d'un traitement, pushs du foyer) sont dans la langue de la personne qui agit.
+
 
 ## Développement
 - Appli : `./gradlew assembleRelease lint testDebugUnitTest`

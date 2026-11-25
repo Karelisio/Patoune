@@ -1,5 +1,9 @@
 package com.karelisio.patoune.ui.components
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -79,7 +83,7 @@ fun SectionCard(
 
 /** Rappel discret : l'appli aide au suivi, les seuils sont ceux fixés avec le véto. */
 @Composable
-fun VetNote(text: String = "Aide au suivi, pas un avis médical. Seuils fixés avec votre véto.", modifier: Modifier = Modifier) {
+fun VetNote(text: String = stringResource(R.string.vet_note_default), modifier: Modifier = Modifier) {
     Row(modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Outlined.Info, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.outline)
         Spacer(Modifier.width(6.dp))
@@ -96,10 +100,14 @@ fun EmptyState(icon: ImageVector, title: String, body: String, modifier: Modifie
     }
 }
 
-/** Compteur animé : chaque chiffre glisse verticalement quand il change. */
+/**
+ * Compteur animé : chaque chiffre glisse verticalement quand il change.
+ * L'accessibilité lit la valeur entière ([description] si fournie), pas chiffre par chiffre.
+ */
 @Composable
-fun AnimatedNumber(value: String, style: TextStyle, modifier: Modifier = Modifier, color: Color = Color.Unspecified) {
-    Row(modifier) {
+fun AnimatedNumber(value: String, style: TextStyle, modifier: Modifier = Modifier, color: Color = Color.Unspecified, description: String = value) {
+    Row(modifier.clearAndSetSemantics { contentDescription = description }) {
+
         value.forEachIndexed { i, ch ->
             AnimatedContent(
                 targetState = ch,

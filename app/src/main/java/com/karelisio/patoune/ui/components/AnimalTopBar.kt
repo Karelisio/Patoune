@@ -1,5 +1,7 @@
 package com.karelisio.patoune.ui.components
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -66,8 +68,8 @@ fun AnimalTopBar(vm: MainViewModel, title: String? = null, scroll: TopAppBarScro
                 FilledTonalButton(onClick = { open = true }) {
                     AnimalAvatar(selected, 28.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text(selected?.name ?: "Ajouter un animal", style = MaterialTheme.typography.titleMedium)
-                    Icon(Icons.Rounded.ExpandMore, null)
+                    Text(selected?.name ?: stringResource(R.string.animal_add), style = MaterialTheme.typography.titleMedium)
+                    Icon(Icons.Rounded.ExpandMore, stringResource(R.string.a11y_choose_animal))
                 }
                 DropdownMenu(open, onDismissRequest = { open = false }, shape = MaterialTheme.shapes.large) {
                     animals.forEach { a ->
@@ -77,12 +79,12 @@ fun AnimalTopBar(vm: MainViewModel, title: String? = null, scroll: TopAppBarScro
                             onClick = { open = false; vm.select(a.id) },
                         )
                     }
-                    DropdownMenuItem(text = { Text("Nouvel animal") }, leadingIcon = { Icon(Icons.Rounded.Add, null) },
+                    DropdownMenuItem(text = { Text(stringResource(R.string.animal_new)) }, leadingIcon = { Icon(Icons.Rounded.Add, null) },
                         onClick = { open = false; nav.navigate(Routes.AnimalEdit()) })
-                    DropdownMenuItem(text = { Text("Gérer les animaux") }, leadingIcon = { Icon(Icons.Rounded.Settings, null) },
+                    DropdownMenuItem(text = { Text(stringResource(R.string.animal_manage)) }, leadingIcon = { Icon(Icons.Rounded.Settings, null) },
                         onClick = { open = false; nav.navigate(Routes.Animals) })
                     selected?.let { a ->
-                        DropdownMenuItem(text = { Text("Modifier ${a.name}") }, onClick = { open = false; nav.navigate(Routes.AnimalEdit(a.id)) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.animal_edit_named, a.name)) }, onClick = { open = false; nav.navigate(Routes.AnimalEdit(a.id)) })
                     }
                 }
             }
@@ -90,7 +92,8 @@ fun AnimalTopBar(vm: MainViewModel, title: String? = null, scroll: TopAppBarScro
         },
         actions = {
             actions()
-            IconButton(onClick = { nav.navigate(Routes.Settings) }) { Icon(Icons.Rounded.Settings, "Réglages") }
+            IconButton(onClick = { nav.navigate(Routes.Settings) }) { Icon(Icons.Rounded.Settings, stringResource(R.string.settings_title)) }
+
         },
     )
 }

@@ -1,5 +1,7 @@
 package com.karelisio.patoune.data
 
+import com.karelisio.patoune.R
+import androidx.annotation.StringRes
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -17,13 +19,15 @@ import java.util.UUID
 
 enum class SyncMode { SOLO, SHARED }
 
-enum class PushType(val label: String, val description: String) {
-    DOSE("Prise donnée", "Quand un membre marque une prise (le rappel s'annule)"),
-    BREATH("Alerte respiratoire", "Fréquence au-dessus du seuil fixé avec le véto"),
-    CRISIS("Crise enregistrée", "Quand un membre enregistre une crise"),
-    STOCK("Stock bas", "Quand un médicament arrive en fin de stock"),
-    LATE("Prise en retard", "Quand une prise n'est pas marquée après le délai prévu"),
+/** Noms d'enum stockés dans les réglages et envoyés dans les pushs : ne pas renommer. */
+enum class PushType(@StringRes val labelRes: Int, @StringRes val descriptionRes: Int) {
+    DOSE(R.string.push_type_dose, R.string.push_type_dose_desc),
+    BREATH(R.string.push_type_breath, R.string.push_type_breath_desc),
+    CRISIS(R.string.push_type_crisis, R.string.push_type_crisis_desc),
+    STOCK(R.string.push_type_stock, R.string.push_type_stock_desc),
+    LATE(R.string.push_type_late, R.string.push_type_late_desc),
 }
+
 
 data class AppSettings(
     val mode: SyncMode = SyncMode.SOLO,

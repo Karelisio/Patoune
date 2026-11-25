@@ -81,10 +81,7 @@ class InsightsTest {
         assertEquals(3, p.daysWith)
         assertEquals(4, p.daysWithout)
         assertEquals(60.0, s.aqi!!.with, 1e-9)
-        assertEquals(
-            "Les jours de crise, le pollen moyen était de 90 grains/m³ contre 30 les autres jours.",
-            Insights.pollenSentence(p),
-        )
+        // La phrase affichée est testée dans TextsTest (ressources traduites).
     }
 
     @Test fun pollenComparisonNotEnoughData() {
@@ -94,7 +91,7 @@ class InsightsTest {
         val s = Insights.summarize(listOf(crisis(base), crisis(base.plusDays(1))), emptyList(), airDays, zone, base, base.plusDays(10))
         assertNull(s.pollen)
         assertNull(s.aqi) // aucun AQI renseigné
-        assertTrue(Insights.pollenSentence(s.pollen).contains("pas encore assez"))
+
         // Jours sans pollen (null) ignorés : 3 jours de crise mais seulement 2 autres jours connus.
         val sparse = (0L..2L).map { air(base.plusDays(it), 80.0) } + listOf(air(base.plusDays(3), 10.0), air(base.plusDays(4), 10.0), air(base.plusDays(5), null))
         assertNull(Insights.compare(sparse.associate { LocalDate.parse(it.date) to it.pollenMax }, (0L..2L).map { base.plusDays(it) }.toSet()))
@@ -124,7 +121,9 @@ class InsightsTest {
         val s = Insights.summarize(crises, emptyList(), emptyList(), zone, d, d)
         assertEquals(mapOf(DayPart.MORNING to 1, DayPart.AFTERNOON to 1, DayPart.EVENING to 3, DayPart.NIGHT to 1), s.dayParts)
         assertEquals(DayPart.EVENING, s.topDayPart)
-        assertEquals("Les crises surviennent le plus souvent le soir (3 sur 6).", Insights.dayPartSentence(s))
+        assertEquals(3, s.dayParts.getValue(DayPart.EVENING))
+        assertEquals(6, s.total)
+
         assertEquals(DayPart.NIGHT, DayPart.of(0))
         assertEquals(DayPart.MORNING, DayPart.of(6))
         assertEquals(DayPart.AFTERNOON, DayPart.of(12))

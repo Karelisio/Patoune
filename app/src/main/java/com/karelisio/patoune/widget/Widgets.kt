@@ -1,5 +1,6 @@
 package com.karelisio.patoune.widget
 
+import androidx.glance.LocalContext
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
@@ -97,6 +98,7 @@ class PatouneWidget : GlanceAppWidget() {
     @Composable
     private fun Content(s: WidgetState) {
         val size = LocalSize.current
+        val ctx = LocalContext.current
         val roomy = size.width >= 250.dp || size.height >= 200.dp
         val count = actionStartActivity(
             Intent().setClassName("com.karelisio.patoune", MainActivity::class.java.name)
@@ -108,11 +110,11 @@ class PatouneWidget : GlanceAppWidget() {
             titleBar = {
                 TitleBar(
                     startIcon = ImageProvider(R.drawable.ic_paw),
-                    title = s.animal ?: "Patoune",
+                    title = s.animal ?: ctx.getString(R.string.app_name),
                     iconColor = colors.primary,
                     textColor = colors.onSurface,
                     actions = {
-                        CircleIconButton(ImageProvider(R.drawable.ic_air), "Compter les respirations", count,
+                        CircleIconButton(ImageProvider(R.drawable.ic_air), ctx.getString(R.string.shortcut_breath), count,
                             backgroundColor = null, contentColor = colors.primary)
                     },
                 )
@@ -129,16 +131,20 @@ class PatouneWidget : GlanceAppWidget() {
                     ) {
                         Column(GlanceModifier.defaultWeight()) {
                             Text(s.medName, style = TextStyle(color = colors.onSecondaryContainer, fontWeight = FontWeight.Medium, fontSize = 14.sp), maxLines = 1)
-                            Text(if (s.given) "Donné" + (s.givenBy?.let { " par $it" } ?: "") else s.medAt?.let { "À ${Dates.fmtTime(it)}" } ?: "",
+                            Text(
+                                when {
+                                    s.given -> s.givenBy?.let { ctx.getString(R.string.widget_given_by, it) } ?: ctx.getString(R.string.dose_given)
+                                    else -> s.medAt?.let { ctx.getString(R.string.widget_at, Dates.fmtTime(it)) } ?: ""
+                                },
                                 style = TextStyle(color = colors.onSecondaryContainer, fontSize = 12.sp))
                         }
                         if (!s.given && s.medId != null) {
                             val give = actionRunCallback<GiveAction>(actionParametersOf(GiveAction.MED to s.medId))
-                            if (size.width >= 200.dp) FilledButton("Donné", give, icon = ImageProvider(R.drawable.ic_check),
+                            if (size.width >= 200.dp) FilledButton(ctx.getString(R.string.dose_given), give, icon = ImageProvider(R.drawable.ic_check),
                                 colors = ButtonDefaults.buttonColors(colors.primary, colors.onPrimary))
-                            else CircleIconButton(ImageProvider(R.drawable.ic_check), "Donné", give, backgroundColor = colors.primary, contentColor = colors.onPrimary)
+                            else CircleIconButton(ImageProvider(R.drawable.ic_check), ctx.getString(R.string.a11y_mark_given), give, backgroundColor = colors.primary, contentColor = colors.onPrimary)
                         } else if (s.given) {
-                            CircleIconButton(ImageProvider(R.drawable.ic_check), "Déjà donné", actionRunCallback<RefreshAction>(),
+                            CircleIconButton(ImageProvider(R.drawable.ic_check), ctx.getString(R.string.a11y_already_given), actionRunCallback<RefreshAction>(),
                                 backgroundColor = colors.tertiaryContainer, contentColor = colors.onTertiaryContainer)
                         }
                     }
@@ -146,13 +152,13 @@ class PatouneWidget : GlanceAppWidget() {
                 }
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     val arrow = when (s.trend) { Breath.Trend.UP -> "↗"; Breath.Trend.DOWN -> "↘"; Breath.Trend.STABLE -> "→" }
-                    Text(s.bpm?.let { "${Breath.format(it)} resp/min $arrow" } ?: "Pas de mesure",
+                    Text(s.bpm?.let { ctx.getString(R.string.widget_bpm, Breath.format(it), arrow) } ?: ctx.getString(R.string.widget_no_measure),
                         style = TextStyle(color = if (s.over) colors.error else colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                         modifier = GlanceModifier.defaultWeight())
                 }
                 if (roomy || s.medName == null) {
                     Spacer(GlanceModifier.defaultWeight())
-                    FilledButton("Compter les respirations", count, GlanceModifier.fillMaxWidth(), icon = ImageProvider(R.drawable.ic_air),
+                    FilledButton(ctx.getString(R.string.shortcut_breath), count, GlanceModifier.fillMaxWidth(), icon = ImageProvider(R.drawable.ic_air),
                         colors = ButtonDefaults.buttonColors(colors.secondaryContainer, colors.onSecondaryContainer))
                 }
                 Spacer(GlanceModifier.height(12.dp))
@@ -174,8 +180,10 @@ class GiveAction : ActionCallback {
         val c = context.container
         val med = parameters[MED]?.let { c.db.medications().byId(it) } ?: return
         when (val r = c.doses.give(med, DoseStatus.GIVEN)) {
-            is DoseResult.AlreadyGiven -> Notif.simple(context, Notif.CH_REMINDERS, ("dbl" + med.id).hashCode(), "Déjà donné ?",
-                "${med.name} a déjà été marqué à ${Dates.fmtTime(r.at)}${if (c.settings.current().shared && r.by.isNotBlank()) " par ${r.by}" else ""}. Ouvrez Patoune pour confirmer une nouvelle prise.")
+            is DoseResult.AlreadyGiven -> Notif.simple(context, Notif.CH_REMINDERS, ("dbl" + med.id).hashCode(), context.getString(R.string.med_double_title),
+                if (c.settings.current().shared && r.by.isNotBlank()) context.getString(R.string.widget_double_by, med.name, Dates.fmtTime(r.at), r.by)
+                else context.getString(R.string.widget_double, med.name, Dates.fmtTime(r.at)))
+
             is DoseResult.Saved -> Unit
         }
         c.widgets.refresh()

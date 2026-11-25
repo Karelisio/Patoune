@@ -1,5 +1,8 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.ui.Labels
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -50,7 +53,8 @@ import kotlinx.coroutines.launch
 /** Gestion des animaux : ordre d'affichage, modification, suppression. */
 @Composable
 fun AnimalsScreen(vm: MainViewModel) {
-    val c = LocalContext.current.container
+    val ctx = LocalContext.current
+    val c = ctx.container
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -63,25 +67,25 @@ fun AnimalsScreen(vm: MainViewModel) {
     }
 
     Scaffold(
-        topBar = { BackTopBar("Mes animaux") },
+        topBar = { BackTopBar(stringResource(R.string.animals_title)) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { nav.navigate(Routes.AnimalEdit()) }, icon = { Icon(Icons.Rounded.Add, null) }, text = { Text("Animal") })
+            ExtendedFloatingActionButton(onClick = { nav.navigate(Routes.AnimalEdit()) }, icon = { Icon(Icons.Rounded.Add, null) }, text = { Text(stringResource(R.string.animals_fab)) })
         },
     ) { pad ->
         LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (animals.isEmpty()) item { EmptyState(Icons.Rounded.Pets, "Aucun animal", "Ajoutez votre premier compagnon.") }
+            if (animals.isEmpty()) item { EmptyState(Icons.Rounded.Pets, stringResource(R.string.animals_empty), stringResource(R.string.animals_empty_body)) }
             itemsIndexed(animals, key = { _, a -> a.id }) { i, a ->
                 ListItem(
                     modifier = Modifier.animateItem().clip(MaterialTheme.shapes.large).clickable { nav.navigate(Routes.AnimalEdit(a.id)) },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     leadingContent = { AnimalAvatar(a, 44.dp) },
                     headlineContent = { Text(a.name) },
-                    supportingContent = { Text(listOf(a.species, a.breed).filter { it.isNotBlank() }.joinToString(" · ")) },
+                    supportingContent = { Text(Labels.animalTraits(ctx, a.species, a.breed)) },
                     trailingContent = {
                         Row {
-                            IconButton(onClick = { move(i, i - 1) }, enabled = i > 0) { Icon(Icons.Rounded.KeyboardArrowUp, "Monter") }
-                            IconButton(onClick = { move(i, i + 1) }, enabled = i < animals.lastIndex) { Icon(Icons.Rounded.KeyboardArrowDown, "Descendre") }
-                            IconButton(onClick = { toDelete = a }) { Icon(Icons.Rounded.Delete, "Supprimer", tint = MaterialTheme.colorScheme.error) }
+                            IconButton(onClick = { move(i, i - 1) }, enabled = i > 0) { Icon(Icons.Rounded.KeyboardArrowUp, stringResource(R.string.animals_move_up, a.name)) }
+                            IconButton(onClick = { move(i, i + 1) }, enabled = i < animals.lastIndex) { Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.animals_move_down, a.name)) }
+                            IconButton(onClick = { toDelete = a }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete_named, a.name), tint = MaterialTheme.colorScheme.error) }
                         }
                     },
                 )
@@ -91,10 +95,11 @@ fun AnimalsScreen(vm: MainViewModel) {
     toDelete?.let { a ->
         AlertDialog(
             onDismissRequest = { toDelete = null },
-            title = { Text("Supprimer ${a.name} ?") },
-            text = { Text("Le profil, ses traitements et leurs rappels seront supprimés" + if (c.sharedFlag) ", aussi chez les autres membres du foyer." else ".") },
-            confirmButton = { TextButton(onClick = { toDelete = null; scope.launch { c.deleteAnimal(a) } }) { Text("Supprimer", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { toDelete = null }) { Text("Annuler") } },
+            title = { Text(stringResource(R.string.delete_named_q, a.name)) },
+            text = { Text(stringResource(if (c.sharedFlag) R.string.animals_delete_body_shared else R.string.animals_delete_body)) },
+            confirmButton = { TextButton(onClick = { toDelete = null; scope.launch { c.deleteAnimal(a) } }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { toDelete = null }) { Text(stringResource(R.string.action_cancel)) } },
+
         )
     }
 }

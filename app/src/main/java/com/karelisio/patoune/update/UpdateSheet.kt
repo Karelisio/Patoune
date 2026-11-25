@@ -1,5 +1,11 @@
 package com.karelisio.patoune.update
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +38,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun UpdateSheet(release: Release, updater: Updater, onDismiss: () -> Unit) {
+    val res = LocalResources.current
     val scope = rememberCoroutineScope()
     var progress by remember { mutableStateOf<Float?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -41,19 +48,21 @@ fun UpdateSheet(release: Release, updater: Updater, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             ShapeBadge(Icons.Rounded.SystemUpdate, PawShapes.sunny, MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer, 64.dp)
-            Text("Patoune ${release.version} est disponible", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.update_available, release.version), style = MaterialTheme.typography.headlineSmall)
             Text(
-                release.changelog.ifBlank { "Améliorations et corrections." },
+                // Le changelog vient de la release GitHub (rédigé en français).
+                release.changelog.ifBlank { stringResource(R.string.update_default_changelog) },
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState()),
             )
             if (progress != null) {
                 LinearWavyProgressIndicator(progress = { animated }, modifier = Modifier.fillMaxWidth())
-                Text("${(animated * 100).toInt()} %", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.update_progress, (animated * 100).toInt()), style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (vitrine) {
-                Button(onClick = { updater.openInVitrine(); onDismiss() }, Modifier.fillMaxWidth()) { Text("Ouvrir dans Vitrine") }
+                Button(onClick = { updater.openInVitrine(); onDismiss() }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.update_open_vitrine)) }
             }
             val download: () -> Unit = {
                 progress = 0f; error = null
@@ -65,12 +74,13 @@ fun UpdateSheet(release: Release, updater: Updater, onDismiss: () -> Unit) {
                                 is DownloadState.Done -> updater.install(s.file)
                             }
                         }
-                    }.onFailure { error = "Téléchargement impossible : ${it.message}"; progress = null }
+                    }.onFailure { error = res.getString(R.string.update_download_failed, it.message ?: ""); progress = null }
                 }
             }
-            if (vitrine) OutlinedButton(onClick = download, enabled = progress == null, modifier = Modifier.fillMaxWidth()) { Text("Télécharger ici") }
-            else Button(onClick = download, enabled = progress == null, modifier = Modifier.fillMaxWidth()) { Text("Télécharger et installer") }
-            OutlinedButton(onClick = onDismiss, Modifier.fillMaxWidth()) { Text("Plus tard") }
+            if (vitrine) OutlinedButton(onClick = download, enabled = progress == null, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.update_download_here)) }
+            else Button(onClick = download, enabled = progress == null, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.update_download_install)) }
+            OutlinedButton(onClick = onDismiss, Modifier.fillMaxWidth()) { Text(stringResource(R.string.onboarding_later)) }
+
         }
     }
 }

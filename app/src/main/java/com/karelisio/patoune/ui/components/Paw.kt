@@ -1,5 +1,6 @@
 package com.karelisio.patoune.ui.components
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -71,9 +72,11 @@ fun PawTrail(color: Color, key: Any?, modifier: Modifier = Modifier, steps: Int 
         delay(steps * 90L + 900)
         onDone()
     }
-    Box(modifier.fillMaxSize()) {
+    // Purement décoratif : ignoré par TalkBack.
+    Box(modifier.fillMaxSize().clearAndSetSemantics {}) {
         Canvas(Modifier.fillMaxSize()) {
             val pawSize = size.minDimension / 9f
+
             for (i in 0 until steps) {
                 val t = (i + 0.5f) / steps
                 val side = if (i % 2 == 0) -1 else 1

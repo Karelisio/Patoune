@@ -1,5 +1,6 @@
 package com.karelisio.patoune.widget
 
+import androidx.glance.LocalContext
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
@@ -51,6 +52,7 @@ class CrisisWidget : GlanceAppWidget() {
     private fun Content() {
         val wide = LocalSize.current.width >= 130.dp
         val colors = GlanceTheme.colors
+        val ctx = LocalContext.current
         val open = actionStartActivity(
             Intent().setClassName("com.karelisio.patoune", MainActivity::class.java.name)
                 .putExtra(MainActivity.EXTRA_ACTION, MainActivity.ACTION_CRISIS)
@@ -61,9 +63,10 @@ class CrisisWidget : GlanceAppWidget() {
                 .cornerRadius(android.R.dimen.system_app_widget_background_radius).padding(6.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (wide) FilledButton("Crise en cours", open, GlanceModifier.fillMaxSize(), icon = ImageProvider(R.drawable.ic_videocam),
+            if (wide) FilledButton(ctx.getString(R.string.crisis_now), open, GlanceModifier.fillMaxSize(), icon = ImageProvider(R.drawable.ic_videocam),
                 colors = ButtonDefaults.buttonColors(colors.errorContainer, colors.onErrorContainer))
-            else CircleIconButton(ImageProvider(R.drawable.ic_videocam), "Crise en cours : filmer", open, GlanceModifier.fillMaxSize(),
+            else CircleIconButton(ImageProvider(R.drawable.ic_videocam), ctx.getString(R.string.a11y_crisis_now), open, GlanceModifier.fillMaxSize(),
+
                 backgroundColor = colors.errorContainer, contentColor = colors.onErrorContainer)
         }
     }

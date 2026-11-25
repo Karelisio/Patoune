@@ -1,5 +1,11 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.ui.fmtQty
+import com.karelisio.patoune.ui.Labels
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,7 +62,7 @@ fun EmergencyScreen(vm: MainViewModel) {
     fun call(phone: String) = ctx.startActivity(Intent(Intent.ACTION_DIAL, "tel:${phone.filter { it.isDigit() || it == '+' }}".toUri()))
 
     Scaffold(topBar = {
-        BackTopBar("Fiche urgence") { a?.let { IconButton(onClick = { nav.navigate(Routes.AnimalEdit(it.id)) }) { Icon(Icons.Rounded.Edit, "Modifier") } } }
+        BackTopBar(stringResource(R.string.emergency_title)) { a?.let { IconButton(onClick = { nav.navigate(Routes.AnimalEdit(it.id)) }) { Icon(Icons.Rounded.Edit, stringResource(R.string.action_edit)) } } }
     }) { pad ->
         if (a == null) return@Scaffold
         LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -66,49 +72,60 @@ fun EmergencyScreen(vm: MainViewModel) {
                     Spacer(Modifier.width(16.dp))
                     Column {
                         Text(a.name, style = MaterialTheme.typography.headlineMedium)
-                        Text(listOf(a.species, a.breed, a.sex).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodyLarge)
-                        weights.lastOrNull()?.let { Text("Poids : ${fmtQty(it.kg)} kg (${Dates.fmtDay(it.date)})", style = MaterialTheme.typography.titleMedium) }
+                        Text(Labels.animalTraits(ctx, a.species, a.breed, a.sex), style = MaterialTheme.typography.bodyLarge)
+                        weights.lastOrNull()?.let { Text(stringResource(R.string.emergency_weight, fmtQty(it.kg), Dates.fmtDay(it.date)), style = MaterialTheme.typography.titleMedium) }
                     }
                 }
             }
             item {
+                val emergencyLabel = stringResource(R.string.a11y_call_emergency_vet, a.emergencyVetName.ifBlank { a.emergencyVetPhone })
                 if (a.emergencyVetPhone.isNotBlank()) Button(
                     onClick = { call(a.emergencyVetPhone) },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
                     modifier = Modifier.fillMaxWidth().height(72.dp),
                 ) {
                     Icon(Icons.Rounded.LocalHospital, null); Spacer(Modifier.width(8.dp))
-                    Text("Véto de garde · ${a.emergencyVetName.ifBlank { a.emergencyVetPhone }}", style = MaterialTheme.typography.titleMedium)
+                    // Libellé explicite pour TalkBack (le bouton fusionne ses enfants et porte le rôle bouton).
+                    Text(stringResource(R.string.emergency_vet_button, a.emergencyVetName.ifBlank { a.emergencyVetPhone }), style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.semantics { contentDescription = emergencyLabel })
                 }
             }
             item {
+                val vetLabel = stringResource(R.string.a11y_call_vet, a.vetName.ifBlank { a.vetPhone })
                 if (a.vetPhone.isNotBlank()) FilledTonalButton(onClick = { call(a.vetPhone) }, Modifier.fillMaxWidth().height(64.dp)) {
                     Icon(Icons.Rounded.Call, null); Spacer(Modifier.width(8.dp))
-                    Text("Véto attitré · ${a.vetName.ifBlank { a.vetPhone }}", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.vet_button, a.vetName.ifBlank { a.vetPhone }), style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.semantics { contentDescription = vetLabel })
                 }
-                if (a.vetPhone.isBlank() && a.emergencyVetPhone.isBlank()) Text("Ajoutez les numéros de vos vétos dans le profil.", color = MaterialTheme.colorScheme.error)
+                if (a.vetPhone.isBlank() && a.emergencyVetPhone.isBlank()) Text(stringResource(R.string.emergency_no_numbers), color = MaterialTheme.colorScheme.error)
             }
             item {
                 SectionCard {
-                    Text("Traitement en cours", style = MaterialTheme.typography.titleLarge)
-                    if (meds.isEmpty()) Text("Aucun")
+                    Text(stringResource(R.string.emergency_current_treatment), style = MaterialTheme.typography.titleLarge)
+                    if (meds.isEmpty()) Text(stringResource(R.string.emergency_none))
                     meds.forEach { m ->
-                        Text("• ${m.name} — ${m.dose.ifBlank { m.type.label }}" + if (m.asNeeded) " (si besoin)" else " à ${m.times.replace(",", ", ")}", style = MaterialTheme.typography.bodyLarge)
+                        val dose = m.dose.ifBlank { stringResource(m.type.labelRes) }
+                        Text(
+                            if (m.asNeeded) stringResource(R.string.emergency_med_as_needed, m.name, dose)
+                            else stringResource(R.string.emergency_med_times, m.name, dose, m.times.replace(",", ", ")),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
                     }
                 }
             }
             item {
                 SectionCard {
-                    Text("Infos clés", style = MaterialTheme.typography.titleLarge)
-                    Text("Allergies : ${a.allergies.ifBlank { "aucune connue" }}", style = MaterialTheme.typography.bodyLarge)
-                    Text("Antécédents : ${a.history.ifBlank { "—" }}", style = MaterialTheme.typography.bodyLarge)
-                    a.birthDate?.let { Text("Né(e) le ${Dates.fmtDay(it)}", style = MaterialTheme.typography.bodyLarge) }
-                    if (a.chipNumber.isNotBlank()) Text("Puce : ${a.chipNumber}", style = MaterialTheme.typography.bodyLarge)
-                    Text("Stérilisé(e) : ${if (a.sterilized) "oui" else "non"}", style = MaterialTheme.typography.bodyLarge)
-                    a.breathThreshold?.let { Text("Seuil respiratoire fixé avec le véto : $it resp/min", style = MaterialTheme.typography.bodyLarge) }
+                    Text(stringResource(R.string.emergency_key_info), style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.emergency_allergies, a.allergies.ifBlank { stringResource(R.string.emergency_no_allergy) }), style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.emergency_history, a.history.ifBlank { stringResource(R.string.dash) }), style = MaterialTheme.typography.bodyLarge)
+                    a.birthDate?.let { Text(stringResource(R.string.emergency_born, Dates.fmtDay(it)), style = MaterialTheme.typography.bodyLarge) }
+                    if (a.chipNumber.isNotBlank()) Text(stringResource(R.string.emergency_chip, a.chipNumber), style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(if (a.sterilized) R.string.emergency_sterilized_yes else R.string.emergency_sterilized_no), style = MaterialTheme.typography.bodyLarge)
+                    a.breathThreshold?.let { Text(stringResource(R.string.emergency_threshold, it), style = MaterialTheme.typography.bodyLarge) }
                 }
             }
-            item { VetNote("Patoune aide au suivi et ne remplace pas l'avis de votre vétérinaire.") }
+            item { VetNote(stringResource(R.string.emergency_disclaimer)) }
+
         }
     }
 }

@@ -1,5 +1,10 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.ui.stableLabel
+import com.karelisio.patoune.ui.Labels
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -57,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -100,13 +106,13 @@ fun JournalScreen(vm: MainViewModel) {
         snackbarHost = { SnackbarHost(snack) },
         floatingActionButton = {
             if (pager.currentPage == 0 && animal != null) ExtendedFloatingActionButton(
-                onClick = { nav.navigate(Routes.CrisisEdit()) }, icon = { Icon(Icons.Rounded.Sick, null) }, text = { Text("Noter une crise") })
+                onClick = { nav.navigate(Routes.CrisisEdit()) }, icon = { Icon(Icons.Rounded.Sick, null) }, text = { Text(stringResource(R.string.journal_fab)) })
         },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             PrimaryTabRow(pager.currentPage) {
-                listOf("Crises", "Observations", "Galerie").forEachIndexed { i, t ->
-                    Tab(pager.currentPage == i, { scope.launch { pager.animateScrollToPage(i) } }, text = { Text(t) })
+                listOf(R.string.journal_tab_crises, R.string.journal_tab_observations, R.string.journal_tab_gallery).forEachIndexed { i, t ->
+                    Tab(pager.currentPage == i, { scope.launch { pager.animateScrollToPage(i) } }, text = { Text(stringResource(t)) })
                 }
             }
             val a = animal ?: return@Column
@@ -123,7 +129,8 @@ fun JournalScreen(vm: MainViewModel) {
 
 @Composable
 private fun CrisisList(animalId: String) {
-    val c = LocalContext.current.container
+    val ctx = LocalContext.current
+    val c = ctx.container
     val shared = c.sharedFlag
     val nav = LocalNav.current
     val crises by remember(animalId) { c.db.crises().observeFor(animalId) }.collectAsState(emptyList())
@@ -131,7 +138,7 @@ private fun CrisisList(animalId: String) {
     val air by remember { c.db.air().observeAll() }.collectAsState(emptyList())
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (crises.isNotEmpty()) item(key = "insights") { InsightsCard(crises, breaths, air) }
-        if (crises.isEmpty()) item { EmptyState(Icons.Rounded.Sick, "Aucune crise notée", "Utilisez « Crise en cours » sur l'accueil pour filmer et horodater en un tap.") }
+        if (crises.isEmpty()) item { EmptyState(Icons.Rounded.Sick, stringResource(R.string.journal_empty), stringResource(R.string.journal_empty_body)) }
         items(crises, key = { it.id }) { cr ->
             val media by remember(cr.id) { c.db.media().observeAttached(cr.id) }.collectAsState(emptyList())
             SectionCard(Modifier.cascade(crises.indexOf(cr)).sharedKey("crisis-${cr.id}").clickable { nav.navigate(Routes.CrisisEdit(cr.id)) }) {
@@ -140,23 +147,30 @@ private fun CrisisList(animalId: String) {
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(Dates.fmtDayTime(cr.startAt), style = MaterialTheme.typography.titleMedium)
-                        Text("Intensité ${cr.intensity}/5 · ${fmtDuration(cr.durationSec)}" + if (cr.types.isNotBlank()) " · ${cr.types.replace(",", ", ")}" else "",
+                        val head = stringResource(R.string.crisis_summary, cr.intensity, fmtDuration(ctx, cr.durationSec))
+                        Text(if (cr.types.isNotBlank()) stringResource(R.string.pair_dot, head, Labels.csv(ctx, CrisisTypes.labels, cr.types)) else head,
                             style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-                if (shared && cr.createdBy.isNotBlank()) Text("Noté par ${cr.createdBy}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (cr.triggers.isNotBlank()) Text("Déclencheurs : ${cr.triggers.replace(",", ", ")}", style = MaterialTheme.typography.labelLarge)
+                if (shared && cr.createdBy.isNotBlank()) Text(stringResource(R.string.crisis_noted_by, cr.createdBy), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (cr.triggers.isNotBlank()) Text(stringResource(R.string.crisis_triggers_list, Labels.csv(ctx, CrisisTypes.labels, cr.triggers)), style = MaterialTheme.typography.labelLarge)
                 if (media.isNotEmpty()) MediaStrip(media)
             }
         }
     }
 }
 
-fun fmtDuration(sec: Int): String = if (sec < 60) "$sec s" else "${sec / 60} min ${if (sec % 60 > 0) "${sec % 60} s" else ""}".trim()
+fun fmtDuration(ctx: Context, sec: Int): String = when {
+    sec < 60 -> ctx.getString(R.string.duration_sec, sec)
+    sec % 60 == 0 -> ctx.getString(R.string.duration_min, sec / 60)
+    else -> ctx.getString(R.string.duration_min_sec, sec / 60, sec % 60)
+}
 
 @Composable
 fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
-    val c = LocalContext.current.container
+    val ctx = LocalContext.current
+    val res = LocalResources.current
+    val c = ctx.container
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
     val animal by vm.selected.collectAsStateWithLifecycle()
@@ -173,7 +187,7 @@ fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
             // Horodatage immédiat : la crise existe même si l'on quitte sans compléter la fiche.
             val a = animal!!
             cr = c.store.save(cr.copy(animalId = a.id))
-            c.hooks.onPush(PushType.CRISIS, "Crise en cours : ${a.name}", "Début à ${Dates.fmtTime(cr.startAt)}", cr.id)
+            c.hooks.onPush(PushType.CRISIS, res.getString(R.string.push_crisis_now, a.name), res.getString(R.string.push_crisis_start, Dates.fmtTime(cr.startAt)), cr.id)
             nav.navigate(Routes.Camera(video = true, attachType = AttachType.CRISIS.name, attachId = cr.id, autoStart = true))
         }
     }
@@ -186,45 +200,47 @@ fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
     }
 
     Scaffold(topBar = {
-        BackTopBar(if (id == null) "Crise" else "Modifier la crise") {
-            if (id != null) IconButton(onClick = { scope.launch { c.store.delete(cr); nav.popBackStack() } }) { Icon(Icons.Rounded.Delete, "Supprimer") }
+        BackTopBar(stringResource(if (id == null) R.string.crisis_title else R.string.crisis_edit_title)) {
+            if (id != null) IconButton(onClick = { scope.launch { c.store.delete(cr); nav.popBackStack() } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.action_delete)) }
         }
     }) { pad ->
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(16.dp).imePadding().sharedKey("crisis-${cr.id}"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(Dates.fmtDayTime(cr.startAt), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                TextButton(onClick = { pickTime = true }) { Text("Changer l'heure") }
+                TextButton(onClick = { pickTime = true }) { Text(stringResource(R.string.crisis_change_time)) }
             }
-            Text("Vidéos et photos", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.crisis_media), style = MaterialTheme.typography.titleMedium)
             if (media.isNotEmpty()) MediaStrip(media)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip({ nav.navigate(Routes.Camera(true, AttachType.CRISIS.name, cr.id)) }, { Text("Filmer") }, leadingIcon = { Icon(Icons.Rounded.Videocam, null) })
-                AssistChip({ nav.navigate(Routes.Camera(false, AttachType.CRISIS.name, cr.id)) }, { Text("Photo") }, leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) })
-                AssistChip({ picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }, { Text("Galerie") }, leadingIcon = { Icon(Icons.Rounded.AddPhotoAlternate, null) })
+                AssistChip({ nav.navigate(Routes.Camera(true, AttachType.CRISIS.name, cr.id)) }, { Text(stringResource(R.string.crisis_film)) }, leadingIcon = { Icon(Icons.Rounded.Videocam, null) })
+                AssistChip({ nav.navigate(Routes.Camera(false, AttachType.CRISIS.name, cr.id)) }, { Text(stringResource(R.string.media_photo)) }, leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) })
+                AssistChip({ picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }, { Text(stringResource(R.string.journal_tab_gallery)) }, leadingIcon = { Icon(Icons.Rounded.AddPhotoAlternate, null) })
             }
-            Field(if (cr.durationSec == 0) "" else cr.durationSec.toString(), { cr = cr.copy(durationSec = it.toIntOrNull() ?: 0) }, "Durée (secondes)", keyboard = KeyboardType.Number)
-            Text("Intensité : ${cr.intensity}/5", style = MaterialTheme.typography.titleMedium)
+            Field(if (cr.durationSec == 0) "" else cr.durationSec.toString(), { cr = cr.copy(durationSec = it.toIntOrNull() ?: 0) }, stringResource(R.string.crisis_duration_field), keyboard = KeyboardType.Number)
+            Text(stringResource(R.string.crisis_intensity, cr.intensity), style = MaterialTheme.typography.titleMedium)
             Slider(cr.intensity.toFloat(), { cr = cr.copy(intensity = it.toInt()) }, valueRange = 1f..5f, steps = 3)
-            Text("Type", style = MaterialTheme.typography.titleMedium)
-            MultiChips(CrisisTypes.all, cr.types) { cr = cr.copy(types = it) }
-            Text("Traitement d'urgence donné", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.crisis_type), style = MaterialTheme.typography.titleMedium)
+            // Valeurs stockées : clés françaises stables ; seul le libellé est traduit.
+            MultiChips(CrisisTypes.all, cr.types, { stableLabel(CrisisTypes.labels, it) }) { cr = cr.copy(types = it) }
+            Text(stringResource(R.string.crisis_rescue), style = MaterialTheme.typography.titleMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rescue.forEach { m -> FilterChip(cr.emergencyTreatment == m.name, { cr = cr.copy(emergencyTreatment = if (cr.emergencyTreatment == m.name) "" else m.name) }, { Text(m.name) }) }
             }
-            Field(cr.emergencyTreatment, { cr = cr.copy(emergencyTreatment = it) }, "Autre traitement / dose")
-            Text("Déclencheurs possibles", style = MaterialTheme.typography.titleMedium)
-            MultiChips(CrisisTypes.triggers, cr.triggers) { cr = cr.copy(triggers = it) }
-            Field(cr.notes, { cr = cr.copy(notes = it) }, "Notes", minLines = 3)
-            VetNote("En cas de détresse respiratoire, contactez immédiatement votre véto ou le véto de garde.")
+            Field(cr.emergencyTreatment, { cr = cr.copy(emergencyTreatment = it) }, stringResource(R.string.crisis_rescue_other))
+            Text(stringResource(R.string.crisis_triggers), style = MaterialTheme.typography.titleMedium)
+            MultiChips(CrisisTypes.triggers, cr.triggers, { stableLabel(CrisisTypes.labels, it) }) { cr = cr.copy(triggers = it) }
+            Field(cr.notes, { cr = cr.copy(notes = it) }, stringResource(R.string.field_notes), minLines = 3)
+            VetNote(stringResource(R.string.crisis_vet_note))
             Button(onClick = {
                 val a = animal ?: return@Button
                 scope.launch {
                     val saved = c.store.save(cr.copy(animalId = cr.animalId.ifEmpty { a.id }))
-                    if (id == null && !startRecording) c.hooks.onPush(PushType.CRISIS, "Crise enregistrée : ${a.name}", "Intensité ${saved.intensity}/5 à ${Dates.fmtTime(saved.startAt)}", saved.id)
+                    if (id == null && !startRecording) c.hooks.onPush(PushType.CRISIS, res.getString(R.string.push_crisis_saved, a.name),
+                        res.getString(R.string.push_crisis_saved_body, saved.intensity, Dates.fmtTime(saved.startAt)), saved.id)
                     c.hooks.onDataChanged()
                     nav.popBackStack()
                 }
-            }, Modifier.fillMaxWidth()) { Text("Enregistrer") }
+            }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
         }
     }
     if (pickTime) {
@@ -243,33 +259,40 @@ private val crisisSaver = androidx.compose.runtime.saveable.Saver<Crisis, String
 /** Saisie rapide d'observations : un tap sur une valeur l'enregistre immédiatement. */
 @Composable
 private fun ObservationsContent(animalId: String, snack: SnackbarHostState) {
-    val c = LocalContext.current.container
+    val ctx = LocalContext.current
+    val res = LocalResources.current
+    val c = ctx.container
     val scope = rememberCoroutineScope()
     val list by remember(animalId) { c.db.observations().observeFor(animalId) }.collectAsState(emptyList())
     var noteFor by remember { mutableStateOf<Observation?>(null) }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(ObsCategory.entries) { cat ->
             SectionCard {
-                Text(cat.label, style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(cat.labelRes), style = MaterialTheme.typography.titleMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     cat.options.forEach { opt ->
                         AssistChip(onClick = {
                             scope.launch {
                                 val o = c.store.save(Observation(animalId = animalId, at = System.currentTimeMillis(), category = cat, value = opt))
-                                val r = snack.showSnackbar("${cat.label} : $opt", actionLabel = "Ajouter une note", withDismissAction = true)
+                                val r = snack.showSnackbar(res.getString(R.string.obs_line, res.getString(cat.labelRes), Labels.obs(ctx, opt)),
+                                    actionLabel = res.getString(R.string.obs_add_note), withDismissAction = true)
                                 if (r == SnackbarResult.ActionPerformed) noteFor = o
                             }
-                        }, label = { Text(opt) })
+                        }, label = { Text(stableLabel(ObsCategory.optionLabels, opt)) })
                     }
                 }
             }
         }
-        item { Text("Historique", style = MaterialTheme.typography.titleMedium) }
+        item { Text(stringResource(R.string.obs_history), style = MaterialTheme.typography.titleMedium) }
         items(list.take(100), key = { it.id }) { o ->
+            val line = stringResource(R.string.obs_line, stringResource(o.category.labelRes), stableLabel(ObsCategory.optionLabels, o.value))
             ListItem(
-                headlineContent = { Text("${o.category.label} : ${o.value}") },
-                supportingContent = { Text(Dates.fmtDayTime(o.at) + (if (o.note.isNotBlank()) " · ${o.note}" else "") + if (c.sharedFlag && o.createdBy.isNotBlank()) " · ${o.createdBy}" else "") },
-                trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(o) } }) { Icon(Icons.Rounded.Delete, "Supprimer") } },
+                headlineContent = { Text(line) },
+                supportingContent = {
+                    Text(listOfNotNull(Dates.fmtDayTime(o.at), o.note.takeIf { it.isNotBlank() }, o.createdBy.takeIf { c.sharedFlag && it.isNotBlank() })
+                        .joinToString(" · "))
+                },
+                trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(o) } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete_named, line)) } },
             )
         }
     }
@@ -277,9 +300,10 @@ private fun ObservationsContent(animalId: String, snack: SnackbarHostState) {
         var text by remember { mutableStateOf("") }
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { noteFor = null },
-            title = { Text("Note") },
-            text = { Field(text, { text = it }, "Note", minLines = 2) },
-            confirmButton = { TextButton(onClick = { scope.launch { c.store.save(o.copy(note = text)) }; noteFor = null }) { Text("OK") } },
+            title = { Text(stringResource(R.string.obs_note)) },
+            text = { Field(text, { text = it }, stringResource(R.string.obs_note), minLines = 2) },
+            confirmButton = { TextButton(onClick = { scope.launch { c.store.save(o.copy(note = text)) }; noteFor = null }) { Text(stringResource(R.string.action_ok)) } },
+
         )
     }
 }

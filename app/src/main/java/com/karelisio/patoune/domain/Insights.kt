@@ -7,14 +7,13 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
  * Analyse des déclencheurs (pure, testable JVM) : crises par mois, déclencheurs et types les plus fréquents,
  * pollens / AQI les jours de crise, respiration selon les pollens, moment de la journée.
- * Ce sont des corrélations descriptives, pas des causes.
+ * Ce sont des corrélations descriptives, pas des causes. Les phrases affichées sont construites côté UI
+ * (`InsightsText`, ressources traduites) à partir de ce résumé.
  */
 object Insights {
     /** Nombre minimal de jours de chaque côté pour qu'une comparaison ait un sens. */
@@ -28,8 +27,9 @@ object Insights {
     /** Moyenne d'une grandeur sur deux groupes de jours ([with] : jours « exposés »). */
     data class Comparison(val with: Double, val without: Double, val daysWith: Int, val daysWithout: Int)
 
-    enum class DayPart(val label: String, val hours: IntRange) {
-        MORNING("le matin", 6..11), AFTERNOON("l'après-midi", 12..17), EVENING("le soir", 18..23), NIGHT("la nuit", 0..5);
+    /** Moments de la journée (libellés traduits côté UI, voir `InsightsText`). */
+    enum class DayPart(val hours: IntRange) {
+        MORNING(6..11), AFTERNOON(12..17), EVENING(18..23), NIGHT(0..5);
 
         companion object { fun of(hour: Int): DayPart = entries.first { hour in it.hours } }
     }
@@ -127,33 +127,4 @@ object Insights {
         val s = values.sorted()
         return if (s.size % 2 == 1) s[s.size / 2] else (s[s.size / 2 - 1] + s[s.size / 2]) / 2
     }
-
-    // Phrases partagées par l'écran et le rapport PDF.
-
-    const val NOT_ENOUGH = "Pas encore assez de données."
-    private val monthFmt = DateTimeFormatter.ofPattern("MMM yyyy", Locale.FRENCH)
-
-    fun fmtMonth(m: YearMonth): String = m.format(monthFmt)
-
-    private fun n(v: Double) = v.roundToInt().toString()
-
-    fun pollenSentence(c: Comparison?): String = c?.let {
-        "Les jours de crise, le pollen moyen était de ${n(it.with)} grains/m³ contre ${n(it.without)} les autres jours."
-    } ?: "Pollens : ${NOT_ENOUGH.lowercase()}"
-
-    fun aqiSentence(c: Comparison?): String = c?.let {
-        "Les jours de crise, l'indice de qualité de l'air moyen était de ${n(it.with)} contre ${n(it.without)} les autres jours."
-    } ?: "Qualité de l'air : ${NOT_ENOUGH.lowercase()}"
-
-    fun breathSentence(c: Comparison?): String = c?.let {
-        "Les jours de pollens forts, la respiration moyenne était de ${n(it.with)} resp/min contre ${n(it.without)} les jours de pollens faibles."
-    } ?: "Respiration et pollens : ${NOT_ENOUGH.lowercase()}"
-
-    fun dayPartSentence(s: Summary): String = when {
-        s.total == 0 -> "Moment de la journée : aucune crise."
-        s.topDayPart == null -> "Pas de moment de la journée dominant."
-        else -> "Les crises surviennent le plus souvent ${s.topDayPart.label} (${s.dayParts.getValue(s.topDayPart)} sur ${s.total})."
-    }
-
-    fun sharesText(list: List<Share>): String = list.joinToString(", ") { "${it.label} ${it.count} (${it.percent} %)" }
 }

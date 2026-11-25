@@ -1,5 +1,7 @@
 package com.karelisio.patoune.reminders
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -142,36 +144,37 @@ private fun AlarmContent(medId: String, scheduled: Long, late: Boolean, onDone: 
             ) {
                 Column(Modifier.padding(28.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     ShapeBadge(Icons.Rounded.AlarmOn, PawShapes.cookie, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary, size = 88.dp)
-                    Text(if (late) "En retard" else "C'est l'heure", style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(if (late) R.string.alarm_late else R.string.alarm_time), style = MaterialTheme.typography.titleLarge)
                     Text(m.name, style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
-                    if (animal.isNotBlank()) Text("pour $animal", style = MaterialTheme.typography.titleMedium)
-                    Text("${m.dose.ifBlank { m.type.label }} · prévu à ${Dates.fmtTime(scheduled)}", style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+                    if (animal.isNotBlank()) Text(stringResource(R.string.alarm_for, animal), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.reminder_text, m.dose.ifBlank { stringResource(m.type.labelRes) }, Dates.fmtTime(scheduled)), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
 
                     val r = conflict
                     if (r != null) {
-                        val who = if (shared && r.by.isNotBlank()) " par ${r.by}" else ""
                         Text(
-                            "Déjà donné à ${Dates.fmtTime(r.at)}$who (${Dates.fmtDayTime(r.at)}). Enregistrer une nouvelle prise ?",
+                            if (shared && r.by.isNotBlank()) stringResource(R.string.alarm_double_by, Dates.fmtTime(r.at), r.by, Dates.fmtDayTime(r.at))
+                            else stringResource(R.string.alarm_double, Dates.fmtTime(r.at), Dates.fmtDayTime(r.at)),
                             style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.error,
                         )
-                        Button(onClick = { conflict = null; give(force = true) }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text("Oui, nouvelle prise") }
-                        OutlinedButton(onClick = { Notif.cancel(context, ReminderScheduler.notifId(m.id)); onDone() }, modifier = Modifier.fillMaxWidth()) { Text("Non") }
+                        Button(onClick = { conflict = null; give(force = true) }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(stringResource(R.string.med_double_confirm)) }
+                        OutlinedButton(onClick = { Notif.cancel(context, ReminderScheduler.notifId(m.id)); onDone() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_no)) }
                     } else {
                         Button(onClick = { give(force = false) }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
                             Icon(Icons.Rounded.Check, null, Modifier.padding(end = 8.dp))
-                            Text("Donné", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.dose_given), style = MaterialTheme.typography.titleMedium)
                         }
                         OutlinedButton(
                             onClick = { act { target -> Notif.cancel(context, ReminderScheduler.notifId(target.id)); c.reminders.snooze(target, scheduled); onDone() } },
                             enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                         ) {
                             Icon(Icons.Rounded.Snooze, null, Modifier.padding(end = 8.dp))
-                            Text("Reporter 15 min")
+                            Text(stringResource(R.string.reminder_snooze))
                         }
                         TextButton(
                             onClick = { act { target -> c.doses.give(target, DoseStatus.SKIPPED, scheduled, force = true); onDone() } },
                             enabled = !busy, modifier = Modifier.fillMaxWidth(),
-                        ) { Text("Sauté") }
+                        ) { Text(stringResource(R.string.dose_skipped)) }
+
                     }
                 }
             }

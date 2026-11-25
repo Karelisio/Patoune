@@ -13,6 +13,8 @@ package `com.karelisio.patoune`. Worker Cloudflare dans `/worker`. Tout en fran�
 - Logique pure et testée dans `domain/` (JVM) ; Robolectric pour Room/DataStore (`app/src/test`).
 - Toute écriture de données passe par `Store.save/delete` (jamais un DAO directement), sauf champs locaux (`saveLocal`).
 - Respecter « réduire les animations » (`rememberReduceMotion`) ; textes d'aide médicale discrets (`VetNote`).
+- Textes : res/values (fr) + values-en ; jamais de texte en dur (valeurs stockées FR = clés, libellés via `ui/Texts.kt`).
+
 - Lint en erreur = build rouge. Garder les gardes d'API (minSdk 29, compileSdk 37.2).
 - Rien de sensible commité : google-services.json, keystore, `.dev.vars` sont ignorés.
 

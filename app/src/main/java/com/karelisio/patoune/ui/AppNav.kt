@@ -1,5 +1,8 @@
 package com.karelisio.patoune.ui
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
@@ -60,14 +63,14 @@ import com.karelisio.patoune.ui.screens.TreatmentsScreen
 import com.karelisio.patoune.ui.screens.SettingsScreen
 import kotlin.reflect.KClass
 
-private data class Tab(val route: Any, val type: KClass<*>, val label: String, val icon: ImageVector)
+private data class Tab(val route: Any, val type: KClass<*>, @StringRes val label: Int, val icon: ImageVector)
 
 private val tabs = listOf(
-    Tab(Routes.Home, Routes.Home::class, "Accueil", Icons.Rounded.Home),
-    Tab(Routes.Treatments, Routes.Treatments::class, "Soins", Icons.Rounded.Medication),
-    Tab(Routes.Breath, Routes.Breath::class, "Souffle", Icons.Rounded.Air),
-    Tab(Routes.Journal, Routes.Journal::class, "Journal", Icons.Rounded.Book),
-    Tab(Routes.Health, Routes.Health::class, "Carnet", Icons.Rounded.MonitorHeart),
+    Tab(Routes.Home, Routes.Home::class, R.string.tab_home, Icons.Rounded.Home),
+    Tab(Routes.Treatments, Routes.Treatments::class, R.string.tab_treatments, Icons.Rounded.Medication),
+    Tab(Routes.Breath, Routes.Breath::class, R.string.tab_breath, Icons.Rounded.Air),
+    Tab(Routes.Journal, Routes.Journal::class, R.string.tab_journal, Icons.Rounded.Book),
+    Tab(Routes.Health, Routes.Health::class, R.string.tab_health, Icons.Rounded.MonitorHeart),
 )
 
 /** Accès à la navigation depuis n'importe quel écran. */
@@ -104,7 +107,8 @@ fun AppNav(vm: MainViewModel, settings: AppSettings, launchAction: String?, onAc
                                 }
                             },
                             icon = { Icon(t.icon, null) },
-                            label = { Text(t.label) },
+                            label = { Text(stringResource(t.label)) },
+
                         )
                     }
                 }

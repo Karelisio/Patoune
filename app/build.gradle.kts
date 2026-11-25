@@ -83,7 +83,7 @@ android {
         abortOnError = true
         warningsAsErrors = false
         checkReleaseBuilds = true
-        disable += setOf("MissingTranslation", "GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion", "ObsoleteLintCustomCheck")
+        disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion", "ObsoleteLintCustomCheck")
     }
 
     packaging {

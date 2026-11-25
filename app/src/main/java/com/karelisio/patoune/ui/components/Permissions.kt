@@ -1,5 +1,7 @@
 package com.karelisio.patoune.ui.components
 
+import com.karelisio.patoune.R
+import androidx.annotation.StringRes
 import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
@@ -32,14 +34,15 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.karelisio.patoune.container
 
-enum class AppPermission(val title: String, val why: String, val icon: ImageVector) {
-    NOTIFICATIONS("Notifications", "Rappels de traitement, alertes respiratoires et prises données par les autres membres.", Icons.Rounded.Notifications),
-    EXACT_ALARMS("Alarmes exactes", "Pour que les rappels de médicaments sonnent à l'heure pile, même en veille.", Icons.Rounded.Alarm),
-    FULL_SCREEN("Rappels plein écran", "Pour les traitements en mode réveil : afficher le rappel en grand, même écran verrouillé.", Icons.Rounded.AlarmOn),
-    CAMERA_MIC("Caméra et micro", "Photos, et vidéos de crise avec le son : la toux s'entend, c'est précieux pour le véto.", Icons.Rounded.Videocam),
-    BATTERY("Batterie sans restriction", "Certains téléphones (Honor/MagicOS, Huawei, Xiaomi…) coupent les applis en arrière-plan : rappels et sync seraient perdus. Pensez aussi à autoriser le lancement automatique dans les réglages du téléphone.", Icons.Rounded.BatteryChargingFull),
-    INSTALL("Installation de mises à jour", "Pour installer les nouvelles versions de Patoune directement depuis l'appli.", Icons.Rounded.InstallMobile),
+enum class AppPermission(@StringRes val titleRes: Int, @StringRes val whyRes: Int, val icon: ImageVector) {
+    NOTIFICATIONS(R.string.perm_notifications, R.string.perm_notifications_why, Icons.Rounded.Notifications),
+    EXACT_ALARMS(R.string.perm_exact_alarms, R.string.perm_exact_alarms_why, Icons.Rounded.Alarm),
+    FULL_SCREEN(R.string.perm_full_screen, R.string.perm_full_screen_why, Icons.Rounded.AlarmOn),
+    CAMERA_MIC(R.string.perm_camera_mic, R.string.perm_camera_mic_why, Icons.Rounded.Videocam),
+    BATTERY(R.string.perm_battery, R.string.perm_battery_why, Icons.Rounded.BatteryChargingFull),
+    INSTALL(R.string.perm_install, R.string.perm_install_why, Icons.Rounded.InstallMobile),
 }
+
 
 object Perms {
     fun granted(context: Context, p: AppPermission): Boolean = when (p) {

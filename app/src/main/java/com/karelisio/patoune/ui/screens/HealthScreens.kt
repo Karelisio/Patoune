@@ -1,5 +1,8 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.ui.fmtQty
+import com.karelisio.patoune.R
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -55,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.karelisio.patoune.container
@@ -84,7 +88,8 @@ import com.karelisio.patoune.ui.components.TrendChart
 import com.karelisio.patoune.ui.components.cascade
 import kotlinx.coroutines.launch
 
-private val tabs = listOf("Soins", "Visites", "Poids", "Documents")
+private val tabs = listOf(R.string.health_tab_care, R.string.health_tab_visits, R.string.health_tab_weight, R.string.health_tab_documents)
+private val fabs = listOf(R.string.health_fab_care, R.string.health_fab_visit, R.string.health_fab_weight, R.string.health_fab_document)
 
 fun CareKind.icon(): ImageVector = when (this) {
     CareKind.VACCINE -> Icons.Rounded.Vaccines
@@ -102,15 +107,15 @@ fun HealthScreen(vm: MainViewModel) {
     var editVisit by remember { mutableStateOf<VetVisit?>(null) }
     val nav = LocalNav.current
     Scaffold(
-        topBar = { AnimalTopBar(vm) { IconButton(onClick = { nav.navigate(Routes.Emergency) }) { Icon(Icons.Rounded.LocalHospital, "Fiche urgence") } } },
+        topBar = { AnimalTopBar(vm) { IconButton(onClick = { nav.navigate(Routes.Emergency) }) { Icon(Icons.Rounded.LocalHospital, stringResource(R.string.emergency_title)) } } },
         floatingActionButton = {
             if (animal != null) ExtendedFloatingActionButton(onClick = { adding = pager.currentPage }, icon = { Icon(Icons.Rounded.Add, null) },
-                text = { Text(listOf("Soin", "Visite", "Pesée", "Document")[pager.currentPage]) })
+                text = { Text(stringResource(fabs[pager.currentPage])) })
         },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             PrimaryScrollableTabRow(pager.currentPage) {
-                tabs.forEachIndexed { i, t -> Tab(pager.currentPage == i, { scope.launch { pager.animateScrollToPage(i) } }, text = { Text(t) }) }
+                tabs.forEachIndexed { i, t -> Tab(pager.currentPage == i, { scope.launch { pager.animateScrollToPage(i) } }, text = { Text(stringResource(t)) }) }
             }
             val a = animal ?: return@Column
             HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
@@ -139,16 +144,16 @@ private fun CareList(animalId: String, onEdit: (CareItem) -> Unit) {
     val c = LocalContext.current.container
     val items by remember(animalId) { c.db.care().observeFor(animalId) }.collectAsState(emptyList())
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (items.isEmpty()) item { EmptyState(Icons.Rounded.Vaccines, "Aucun soin", "Vaccins, vermifuges et antipuces, avec rappel de la prochaine échéance.") }
+        if (items.isEmpty()) item { EmptyState(Icons.Rounded.Vaccines, stringResource(R.string.health_care_empty), stringResource(R.string.health_care_empty_body)) }
         items(items, key = { it.id }) { ci ->
             val due = Dates.parse(ci.nextDue)
             val late = due != null && !due.isAfter(Dates.today())
             ListItem(
                 modifier = Modifier.cascade(items.indexOf(ci)).clickable { onEdit(ci) },
                 leadingContent = { ShapeBadge(ci.kind.icon(), PawShapes.clover, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, 40.dp) },
-                headlineContent = { Text("${ci.kind.label} · ${ci.name}") },
+                headlineContent = { Text(stringResource(R.string.pair_dot, stringResource(ci.kind.labelRes), ci.name)) },
                 supportingContent = {
-                    Text("Fait le ${Dates.fmtDay(ci.date)}" + (due?.let { " · rappel ${Dates.fmtDay(ci.nextDue)}" } ?: ""),
+                    Text(if (due != null) stringResource(R.string.health_care_done_due, Dates.fmtDay(ci.date), Dates.fmtDay(ci.nextDue)) else stringResource(R.string.health_care_done, Dates.fmtDay(ci.date)),
                         color = if (late) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                 },
             )
@@ -158,25 +163,27 @@ private fun CareList(animalId: String, onEdit: (CareItem) -> Unit) {
 
 @Composable
 private fun CareSheet(initial: CareItem, onDismiss: () -> Unit) {
-    val c = LocalContext.current.container
+    val ctx = LocalContext.current
+    val res = LocalResources.current
+    val c = ctx.container
     val scope = rememberCoroutineScope()
     var ci by remember { mutableStateOf(initial) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ChoiceChips(CareKind.entries, ci.kind, { it.label }) { ci = ci.copy(kind = it) }
-            Field(ci.name, { ci = ci.copy(name = it) }, "Produit (ex. Typhus-Coryza, Milbemax)")
-            DateField(ci.date, { ci = ci.copy(date = it ?: Dates.today().toString()) }, "Date", clearable = false)
-            DateField(ci.nextDue, { ci = ci.copy(nextDue = it) }, "Prochain rappel")
+            ChoiceChips(CareKind.entries, ci.kind, { stringResource(it.labelRes) }) { ci = ci.copy(kind = it) }
+            Field(ci.name, { ci = ci.copy(name = it) }, stringResource(R.string.health_care_product))
+            DateField(ci.date, { ci = ci.copy(date = it ?: Dates.today().toString()) }, stringResource(R.string.field_date), clearable = false)
+            DateField(ci.nextDue, { ci = ci.copy(nextDue = it) }, stringResource(R.string.health_care_next_due))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(1L to "+1 mois", 3L to "+3 mois", 12L to "+1 an").forEach { (m, l) ->
-                    AssistChip({ ci = ci.copy(nextDue = (Dates.parse(ci.date) ?: Dates.today()).plusMonths(m).toString()) }, { Text(l) })
+                listOf(1L to R.string.health_plus_1_month, 3L to R.string.health_plus_3_months, 12L to R.string.health_plus_1_year).forEach { (m, l) ->
+                    AssistChip({ ci = ci.copy(nextDue = (Dates.parse(ci.date) ?: Dates.today()).plusMonths(m).toString()) }, { Text(stringResource(l)) })
                 }
             }
-            Field(ci.notes, { ci = ci.copy(notes = it) }, "Notes")
+            Field(ci.notes, { ci = ci.copy(notes = it) }, stringResource(R.string.field_notes))
             Row {
-                if (initial.id.isNotEmpty()) TextButton(onClick = { scope.launch { c.store.delete(ci); onDismiss() } }) { Text("Supprimer", color = MaterialTheme.colorScheme.error) }
+                if (initial.id.isNotEmpty()) TextButton(onClick = { scope.launch { c.store.delete(ci); onDismiss() } }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
                 Spacer(Modifier.weight(1f))
-                Button(onClick = { scope.launch { c.store.save(ci.copy(name = ci.name.ifBlank { ci.kind.label })); onDismiss() } }) { Text("Enregistrer") }
+                Button(onClick = { scope.launch { c.store.save(ci.copy(name = ci.name.ifBlank { res.getString(ci.kind.labelRes) })); onDismiss() } }) { Text(stringResource(R.string.action_save)) }
             }
             Spacer(Modifier.padding(8.dp))
         }
@@ -188,13 +195,13 @@ private fun VisitList(animalId: String, onEdit: (VetVisit) -> Unit) {
     val c = LocalContext.current.container
     val visits by remember(animalId) { c.db.visits().observeFor(animalId) }.collectAsState(emptyList())
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (visits.isEmpty()) item { EmptyState(Icons.Rounded.LocalHospital, "Aucune visite", "Motif, compte rendu et prochaine visite chez le véto.") }
+        if (visits.isEmpty()) item { EmptyState(Icons.Rounded.LocalHospital, stringResource(R.string.health_visit_empty), stringResource(R.string.health_visit_empty_body)) }
         items(visits, key = { it.id }) { v ->
             val media by remember(v.id) { c.db.media().observeAttached(v.id) }.collectAsState(emptyList())
             SectionCard(Modifier.cascade(visits.indexOf(v)).clickable { onEdit(v) }) {
-                Text("${Dates.fmtDay(v.date)} · ${v.reason.ifBlank { "Visite" }}", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.pair_dot, Dates.fmtDay(v.date), v.reason.ifBlank { stringResource(R.string.health_fab_visit) }), style = MaterialTheme.typography.titleMedium)
                 if (v.report.isNotBlank()) Text(v.report, style = MaterialTheme.typography.bodyMedium, maxLines = 4)
-                v.nextVisit?.let { Text("Prochaine visite : ${Dates.fmtDay(it)}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+                v.nextVisit?.let { Text(stringResource(R.string.health_next_visit_on, Dates.fmtDay(it)), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
                 if (media.isNotEmpty()) MediaStrip(media)
             }
         }
@@ -213,19 +220,19 @@ private fun VisitSheet(initial: VetVisit, onDismiss: () -> Unit) {
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            DateField(v.date, { v = v.copy(date = it ?: Dates.today().toString()) }, "Date", clearable = false)
-            Field(v.reason, { v = v.copy(reason = it) }, "Motif")
-            Field(v.report, { v = v.copy(report = it) }, "Compte rendu", minLines = 4)
-            DateField(v.nextVisit, { v = v.copy(nextVisit = it) }, "Prochaine visite")
+            DateField(v.date, { v = v.copy(date = it ?: Dates.today().toString()) }, stringResource(R.string.field_date), clearable = false)
+            Field(v.reason, { v = v.copy(reason = it) }, stringResource(R.string.health_visit_reason))
+            Field(v.report, { v = v.copy(report = it) }, stringResource(R.string.health_visit_report), minLines = 4)
+            DateField(v.nextVisit, { v = v.copy(nextVisit = it) }, stringResource(R.string.health_next_visit))
             if (media.isNotEmpty()) MediaStrip(media)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip({ scope.launch { c.store.save(v) }; onDismiss(); nav.navigate(Routes.Camera(false, AttachType.VISIT.name, v.id)) }, { Text("Photo") }, leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) })
-                AssistChip({ picker.launch(arrayOf("image/*", "application/pdf", "video/*")) }, { Text("Joindre") }, leadingIcon = { Icon(Icons.Rounded.AttachFile, null) })
+                AssistChip({ scope.launch { c.store.save(v) }; onDismiss(); nav.navigate(Routes.Camera(false, AttachType.VISIT.name, v.id)) }, { Text(stringResource(R.string.media_photo)) }, leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) })
+                AssistChip({ picker.launch(arrayOf("image/*", "application/pdf", "video/*")) }, { Text(stringResource(R.string.media_attach)) }, leadingIcon = { Icon(Icons.Rounded.AttachFile, null) })
             }
             Row {
-                if (initial.updatedAt > 0) TextButton(onClick = { scope.launch { c.store.delete(v); onDismiss() } }) { Text("Supprimer", color = MaterialTheme.colorScheme.error) }
+                if (initial.updatedAt > 0) TextButton(onClick = { scope.launch { c.store.delete(v); onDismiss() } }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
                 Spacer(Modifier.weight(1f))
-                Button(onClick = { scope.launch { c.store.save(v); onDismiss() } }) { Text("Enregistrer") }
+                Button(onClick = { scope.launch { c.store.save(v); onDismiss() } }) { Text(stringResource(R.string.action_save)) }
             }
             Spacer(Modifier.padding(8.dp))
         }
@@ -238,16 +245,16 @@ private fun WeightContent(animalId: String) {
     val scope = rememberCoroutineScope()
     val weights by remember(animalId) { c.db.weights().observeFor(animalId) }.collectAsState(emptyList())
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (weights.isEmpty()) item { EmptyState(Icons.Rounded.MonitorWeight, "Aucune pesée", "Ajoutez les pesées pour suivre la courbe de poids.") }
+        if (weights.isEmpty()) item { EmptyState(Icons.Rounded.MonitorWeight, stringResource(R.string.health_weight_empty), stringResource(R.string.health_weight_empty_body)) }
         else item {
             SectionCard {
-                Text("Poids actuel : ${fmtQty(weights.last().kg)} kg", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.health_weight_current, fmtQty(weights.last().kg)), style = MaterialTheme.typography.titleLarge)
                 TrendChart(weights.map { ChartPoint(Dates.startOfDay(java.time.LocalDate.parse(it.date)), it.kg) }, color = MaterialTheme.colorScheme.secondary, unit = "kg")
             }
         }
         items(weights.reversed(), key = { it.id }) { w ->
-            ListItem(headlineContent = { Text("${fmtQty(w.kg)} kg") }, supportingContent = { Text(Dates.fmtDay(w.date)) },
-                trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(w) } }) { Icon(Icons.Rounded.Delete, "Supprimer") } })
+            ListItem(headlineContent = { Text(stringResource(R.string.weight_kg, fmtQty(w.kg))) }, supportingContent = { Text(Dates.fmtDay(w.date)) },
+                trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(w) } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.health_weight_delete, fmtQty(w.kg), Dates.fmtDay(w.date))) } })
         }
     }
 }
@@ -260,10 +267,10 @@ private fun WeightSheet(animalId: String, onDismiss: () -> Unit) {
     var date by remember { mutableStateOf(Dates.today().toString()) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            NumberField(null, { kg = it }, "Poids (kg)")
-            DateField(date, { date = it ?: Dates.today().toString() }, "Date", clearable = false)
+            NumberField(null, { kg = it }, stringResource(R.string.health_weight_field))
+            DateField(date, { date = it ?: Dates.today().toString() }, stringResource(R.string.field_date), clearable = false)
             Button(onClick = { scope.launch { kg?.let { c.store.save(WeightEntry(animalId = animalId, date = date, kg = it)) }; onDismiss() } },
-                enabled = kg != null, modifier = Modifier.fillMaxWidth()) { Text("Enregistrer") }
+                enabled = kg != null, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
             Spacer(Modifier.padding(8.dp))
         }
     }
@@ -276,7 +283,7 @@ private fun DocumentList(animalId: String) {
     val scope = rememberCoroutineScope()
     val docs by remember(animalId) { c.db.documents().observeFor(animalId) }.collectAsState(emptyList())
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (docs.isEmpty()) item { EmptyState(Icons.Rounded.Description, "Aucun document", "Ordonnances et analyses en PDF ou en photo, consultables hors ligne.") }
+        if (docs.isEmpty()) item { EmptyState(Icons.Rounded.Description, stringResource(R.string.health_doc_empty), stringResource(R.string.health_doc_empty_body)) }
         items(docs, key = { it.id }) { d ->
             val attached by remember(d.id) { c.db.media().observeAttached(d.id) }.collectAsState(emptyList())
             val m = attached.firstOrNull { it.id == d.mediaId } ?: attached.firstOrNull()
@@ -285,9 +292,9 @@ private fun DocumentList(animalId: String) {
                 leadingContent = {
                     m?.let { MediaThumb(it, size = 56.dp) } ?: ShapeBadge(Icons.Rounded.Description, PawShapes.gem, MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
                 },
-                headlineContent = { Text(d.title.ifBlank { d.kind.label }) },
-                supportingContent = { Text("${d.kind.label} · ${Dates.fmtDay(d.date)}") },
-                trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(d) } }) { Icon(Icons.Rounded.Delete, "Supprimer") } },
+                headlineContent = { Text(d.title.ifBlank { stringResource(d.kind.labelRes) }) },
+                supportingContent = { Text(stringResource(R.string.pair_dot, stringResource(d.kind.labelRes), Dates.fmtDay(d.date))) },
+                trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(d) } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete_named, d.title.ifBlank { stringResource(d.kind.labelRes) })) } },
             )
         }
     }
@@ -295,7 +302,9 @@ private fun DocumentList(animalId: String) {
 
 @Composable
 private fun DocumentSheet(animalId: String, onDismiss: () -> Unit) {
-    val c = LocalContext.current.container
+    val ctx = LocalContext.current
+    val res = LocalResources.current
+    val c = ctx.container
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
     var d by remember { mutableStateOf(HealthDocument(id = newId(), animalId = animalId, date = Dates.today().toString())) }
@@ -307,16 +316,17 @@ private fun DocumentSheet(animalId: String, onDismiss: () -> Unit) {
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ChoiceChips(DocKind.entries, d.kind, { it.label }) { d = d.copy(kind = it) }
-            Field(d.title, { d = d.copy(title = it) }, "Titre")
-            DateField(d.date, { d = d.copy(date = it ?: Dates.today().toString()) }, "Date", clearable = false)
+            ChoiceChips(DocKind.entries, d.kind, { stringResource(it.labelRes) }) { d = d.copy(kind = it) }
+            Field(d.title, { d = d.copy(title = it) }, stringResource(R.string.health_doc_title))
+            DateField(d.date, { d = d.copy(date = it ?: Dates.today().toString()) }, stringResource(R.string.field_date), clearable = false)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                AssistChip({ picker.launch(arrayOf("application/pdf", "image/*")) }, { Text("PDF ou image") }, leadingIcon = { Icon(Icons.Rounded.AttachFile, null) })
-                AssistChip({ scope.launch { c.store.save(d) }; onDismiss(); nav.navigate(Routes.Camera(false, AttachType.DOCUMENT.name, d.id)) }, { Text("Photographier") },
+                AssistChip({ picker.launch(arrayOf("application/pdf", "image/*")) }, { Text(stringResource(R.string.health_doc_pick)) }, leadingIcon = { Icon(Icons.Rounded.AttachFile, null) })
+                AssistChip({ scope.launch { c.store.save(d) }; onDismiss(); nav.navigate(Routes.Camera(false, AttachType.DOCUMENT.name, d.id)) }, { Text(stringResource(R.string.health_doc_shoot)) },
                     leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) })
             }
-            fileName?.let { Text("Fichier joint ✓", color = MaterialTheme.colorScheme.primary) }
-            Button(onClick = { scope.launch { c.store.save(d.copy(title = d.title.ifBlank { d.kind.label })); onDismiss() } }, Modifier.fillMaxWidth()) { Text("Enregistrer") }
+            fileName?.let { Text(stringResource(R.string.health_doc_attached), color = MaterialTheme.colorScheme.primary) }
+            Button(onClick = { scope.launch { c.store.save(d.copy(title = d.title.ifBlank { res.getString(d.kind.labelRes) })); onDismiss() } }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
+
             Spacer(Modifier.padding(8.dp))
         }
     }

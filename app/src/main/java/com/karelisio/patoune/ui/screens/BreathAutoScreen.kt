@@ -1,5 +1,9 @@
 package com.karelisio.patoune.ui.screens
 
+import com.karelisio.patoune.R
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.stringResource
 import android.graphics.Bitmap
 import android.graphics.RectF
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,6 +45,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.karelisio.patoune.container
@@ -71,6 +76,7 @@ import kotlin.math.roundToInt
 @Composable
 fun BreathAutoScreen(vm: MainViewModel) {
     val ctx = LocalContext.current
+    val res = LocalResources.current
     val c = ctx.container
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
@@ -92,18 +98,19 @@ fun BreathAutoScreen(vm: MainViewModel) {
         }
     }
 
-    Scaffold(topBar = { BackTopBar("Comptage auto (expérimental)") }) { pad ->
+    Scaffold(topBar = { BackTopBar(stringResource(R.string.auto_title)) }) { pad ->
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionCard {
                 ShapeBadge(Icons.Rounded.AutoAwesome, PawShapes.sunny, MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-                Text("Filmez votre animal endormi 20 à 30 s, téléphone immobile. Choisissez la vidéo, puis tracez un rectangle sur le flanc.", style = MaterialTheme.typography.bodyMedium)
-                Button(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) }, Modifier.fillMaxWidth()) { Text("Choisir une vidéo") }
+                Text(stringResource(R.string.auto_intro), style = MaterialTheme.typography.bodyMedium)
+                Button(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.auto_pick)) }
             }
             frame?.let { bmp ->
                 Box(Modifier.fillMaxWidth().aspectRatio(bmp.width.toFloat() / bmp.height).clip(MaterialTheme.shapes.large)) {
                     Image(bmp.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
                     val accent = MaterialTheme.colorScheme.primary
-                    Canvas(Modifier.fillMaxSize().pointerInput(Unit) {
+                    val zoneLabel = stringResource(R.string.a11y_auto_zone)
+                    Canvas(Modifier.fillMaxSize().semantics { contentDescription = zoneLabel }.pointerInput(Unit) {
                         detectDragGestures(onDragStart = { start = it; end = it }, onDrag = { ch, _ -> end = ch.position })
                     }) {
                         box = size
@@ -124,31 +131,32 @@ fun BreathAutoScreen(vm: MainViewModel) {
                         scope.launch { result = MotionAnalyzer.analyze(f, roi) { p -> progress = p }; progress = -1f }
                     },
                     enabled = start != null && end != null && progress < 0, modifier = Modifier.fillMaxWidth(),
-                ) { Text("Analyser le mouvement") }
+                ) { Text(stringResource(R.string.auto_analyze)) }
             }
             if (progress >= 0) LinearWavyProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
             result?.let { r ->
                 SectionCard {
-                    if (r.bpm == null) Text("Rythme non détecté : essayez une zone plus large sur le flanc, ou une vidéo plus stable.")
+                    if (r.bpm == null) Text(stringResource(R.string.auto_not_detected))
                     else {
-                        Text("Estimation à valider", style = MaterialTheme.typography.titleMedium)
-                        AnimatedNumber("≈ ${Breath.format(r.bpm)}", BigNumber)
-                        Text("respirations / min sur ${r.seconds.roundToInt()} s", style = MaterialTheme.typography.bodyMedium)
-                        TrendChart(r.signal.mapIndexed { i, v -> ChartPoint(i.toLong(), v) }, height = 100.dp)
+                        Text(stringResource(R.string.auto_estimate), style = MaterialTheme.typography.titleMedium)
+                        AnimatedNumber("≈ ${Breath.format(r.bpm)}", BigNumber, description = stringResource(R.string.a11y_auto_estimate, Breath.format(r.bpm)))
+                        Text(stringResource(R.string.auto_estimate_detail, r.seconds.roundToInt()), style = MaterialTheme.typography.bodyMedium)
+                        TrendChart(r.signal.mapIndexed { i, v -> ChartPoint(i.toLong(), v) }, height = 100.dp, description = stringResource(R.string.a11y_auto_signal))
                         Button(onClick = {
                             val a = animal ?: return@Button
                             scope.launch {
                                 val saved = c.store.save(BreathCount(animalId = a.id, at = System.currentTimeMillis(), taps = (r.bpm * r.seconds / 60).roundToInt(),
-                                    durationSec = r.seconds.roundToInt().coerceAtLeast(1), bpm = r.bpm, context = BreathContext.SLEEP, note = "Comptage auto", estimated = true))
+                                    durationSec = r.seconds.roundToInt().coerceAtLeast(1), bpm = r.bpm, context = BreathContext.SLEEP, note = res.getString(R.string.breath_auto), estimated = true))
                                 BreathAlerts.check(c, a, saved)
                                 nav.popBackStack()
                             }
-                        }, Modifier.fillMaxWidth()) { Text("Valider et enregistrer") }
-                        OutlinedButton(onClick = { nav.navigate(Routes.BreathCounter(night = true)) }, Modifier.fillMaxWidth()) { Text("Recompter à la main") }
+                        }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.auto_confirm)) }
+                        OutlinedButton(onClick = { nav.navigate(Routes.BreathCounter(night = true)) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.auto_recount)) }
                     }
                 }
             }
-            VetNote("Estimation expérimentale : vérifiez toujours par un comptage manuel.")
+            VetNote(stringResource(R.string.auto_vet_note))
+
         }
     }
 }

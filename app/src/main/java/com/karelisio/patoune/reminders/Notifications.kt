@@ -26,18 +26,19 @@ object Notif {
     fun createChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannels(listOf(
-            NotificationChannel(CH_REMINDERS, "Rappels de traitement", NotificationManager.IMPORTANCE_HIGH).apply { description = "Médicaments à donner" },
-            NotificationChannel(CH_ALARM, "Rappels réveil", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Traitements en mode réveil : sonnerie d'alarme et écran plein"
+            NotificationChannel(CH_REMINDERS, context.getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_HIGH).apply { description = context.getString(R.string.channel_reminders_desc) },
+            NotificationChannel(CH_ALARM, context.getString(R.string.channel_alarm), NotificationManager.IMPORTANCE_HIGH).apply {
+                description = context.getString(R.string.channel_alarm_desc)
                 setSound(
                     RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
                     AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
                 )
                 enableVibration(true)
             },
-            NotificationChannel(CH_ALERTS, "Alertes respiratoires", NotificationManager.IMPORTANCE_HIGH).apply { description = "Fréquence au-dessus du seuil fixé avec le véto" },
-            NotificationChannel(CH_STOCK, "Stock et rappels de soins", NotificationManager.IMPORTANCE_DEFAULT),
-            NotificationChannel(CH_HOUSEHOLD, "Foyer partagé", NotificationManager.IMPORTANCE_DEFAULT).apply { description = "Prises et crises enregistrées par les autres membres" },
+            NotificationChannel(CH_ALERTS, context.getString(R.string.channel_alerts), NotificationManager.IMPORTANCE_HIGH).apply { description = context.getString(R.string.push_type_breath_desc) },
+            NotificationChannel(CH_STOCK, context.getString(R.string.channel_stock), NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel(CH_HOUSEHOLD, context.getString(R.string.settings_shared), NotificationManager.IMPORTANCE_DEFAULT).apply { description = context.getString(R.string.channel_household_desc) },
+
         ))
     }
 

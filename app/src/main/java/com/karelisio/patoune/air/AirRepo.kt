@@ -32,7 +32,10 @@ class AirRepo(private val dao: AirDao) {
 
     suspend fun search(query: String): List<City> {
         val q = URLEncoder.encode(query.trim(), "UTF-8")
-        val r = get("https://geocoding-api.open-meteo.com/v1/search?name=$q&count=8&language=fr&format=json")
+        // Noms de villes et de pays dans la langue du téléphone.
+        val lang = java.util.Locale.getDefault().language.ifBlank { "fr" }
+        val r = get("https://geocoding-api.open-meteo.com/v1/search?name=$q&count=8&language=$lang&format=json")
+
         return (r["results"] as? JsonArray).orEmpty().map { it.jsonObject }.map { o ->
             City(
                 o["name"]!!.jsonPrimitive.content,

@@ -15,7 +15,9 @@ open class Hooks(private val c: AppContainer) {
     open suspend fun onDose(med: Medication, log: DoseLog) {
         if (shared() && log.status == com.karelisio.patoune.data.DoseStatus.GIVEN) {
             val animal = c.db.animals().byId(med.animalId)?.name.orEmpty()
-            onPush(PushType.DOSE, "${med.name} donné", "Pour $animal à ${com.karelisio.patoune.domain.Dates.fmtTime(log.takenAt)}", med.id)
+            onPush(PushType.DOSE, c.context.getString(R.string.push_dose_title, med.name),
+                c.context.getString(R.string.push_dose_body, animal, com.karelisio.patoune.domain.Dates.fmtTime(log.takenAt)), med.id)
+
         }
         onDataChanged()
     }

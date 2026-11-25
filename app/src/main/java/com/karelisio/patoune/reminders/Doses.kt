@@ -1,5 +1,7 @@
 package com.karelisio.patoune.reminders
 
+import com.karelisio.patoune.ui.unitQty
+import com.karelisio.patoune.R
 import com.karelisio.patoune.AppContainer
 import com.karelisio.patoune.data.DoseLog
 import com.karelisio.patoune.data.DoseStatus
@@ -61,8 +63,11 @@ class Doses(private val c: AppContainer) {
 
     suspend fun checkStock(med: Medication) {
         if (!Stock.isLow(med.stockRemaining, med.stockAlertAt)) return
-        val left = "${med.stockRemaining?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }} ${med.type.unit}(s)"
-        Notif.simple(c.context, Notif.CH_STOCK, ("stock" + med.id).hashCode(), "Stock bas : ${med.name}", "Il reste $left. Pensez au renouvellement.")
-        c.hooks.onPush(PushType.STOCK, "Stock bas : ${med.name}", "Il reste $left.", med.id)
+        val ctx = c.context
+        val left = unitQty(ctx, med.type, med.stockRemaining)
+        val title = ctx.getString(R.string.notif_stock_title, med.name)
+        Notif.simple(ctx, Notif.CH_STOCK, ("stock" + med.id).hashCode(), title, ctx.getString(R.string.notif_stock_body, left))
+        c.hooks.onPush(PushType.STOCK, title, ctx.getString(R.string.push_stock_body, left), med.id)
+
     }
 }
