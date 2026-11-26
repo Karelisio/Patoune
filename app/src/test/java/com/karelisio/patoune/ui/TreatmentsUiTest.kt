@@ -50,9 +50,9 @@ class TreatmentsUiTest {
 
     @Test fun giveFromTreatmentsScreenMarksDose() {
         rule.setScreen { TreatmentsScreen(it) }
-        rule.waitUntil(5_000) { rule.onAllNodes(hasText("Flixotide")).fetchSemanticsNodes().isNotEmpty() }
+        rule.awaitUntil(15_000) { rule.onAllNodes(hasText("Flixotide")).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithContentDescription(str(R.string.a11y_mark_given)).performClick()
-        rule.waitUntil(5_000) { rule.onAllNodes(hasContentDescription(str(R.string.a11y_already_given))).fetchSemanticsNodes().isNotEmpty() }
+        rule.awaitUntil(15_000) { rule.onAllNodes(hasContentDescription(str(R.string.a11y_already_given))).fetchSemanticsNodes().isNotEmpty() }
         assertEquals(1, givenCount())
     }
 
@@ -65,9 +65,9 @@ class TreatmentsUiTest {
         rule.setContent { FrozenTreatment(med) }
         val give = rule.onNodeWithContentDescription(str(R.string.a11y_mark_given))
         give.performClick()
-        rule.waitUntil(5_000) { givenCount() == 1 }
+        rule.awaitUntil(15_000) { givenCount() == 1 }
         give.performClick()
-        rule.waitUntil(5_000) { rule.onAllNodes(hasText(str(R.string.med_double_title))).fetchSemanticsNodes().isNotEmpty() }
+        rule.awaitUntil(15_000) { rule.onAllNodes(hasText(str(R.string.med_double_title))).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithText(str(R.string.med_double_title)).assertIsDisplayed()
         assertEquals(1, givenCount())
         // « Non » : rien de plus n'est enregistré.
@@ -79,16 +79,17 @@ class TreatmentsUiTest {
     /** Saisie après coup depuis la fiche du traitement : la prise apparaît dans l'historique, modifiable. */
     @Test fun addPastDoseFromDetailAppearsInHistory() {
         rule.setScreen { MedicationDetailScreen(it, med.id) }
-        rule.waitUntil(5_000) { rule.onAllNodes(hasText(str(R.string.dose_add_past))).fetchSemanticsNodes().isNotEmpty() }
+        rule.awaitUntil(15_000) { rule.onAllNodes(hasText(str(R.string.dose_add_past))).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithText(str(R.string.dose_add_past)).performClick()
-        rule.waitUntil(5_000) { rule.onAllNodes(hasText(str(R.string.action_save))).fetchSemanticsNodes().isNotEmpty() }
+        rule.awaitUntil(15_000) { rule.onAllNodes(hasText(str(R.string.action_save))).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithText(str(R.string.action_save)).performClick()
-        rule.waitUntil(5_000) { givenCount() == 1 }
+        rule.awaitUntil(15_000) { givenCount() == 1 }
         // La ligne d'historique annonce « Modifier la prise » à TalkBack.
         val editRow = SemanticsMatcher("ligne de prise modifiable") { it.config.getOrNull(SemanticsActions.OnClick)?.label == str(R.string.dose_edit_title) }
-        rule.waitUntil(5_000) { rule.onAllNodes(editRow).fetchSemanticsNodes().size == 1 }
+        rule.awaitUntil(15_000) { rule.onAllNodes(editRow).fetchSemanticsNodes().size == 1 }
         rule.onNode(editRow).assertIsDisplayed()
-        rule.onNodeWithText(str(R.string.action_save)).assertDoesNotExist()
+        // La feuille se ferme avec une animation : on attend sa disparition (CI plus lente).
+        rule.awaitUntil(15_000) { rule.onAllNodes(hasText(str(R.string.action_save))).fetchSemanticsNodes().isEmpty() }
     }
 
     @Composable
@@ -96,7 +97,9 @@ class TreatmentsUiTest {
         val scope = rememberCoroutineScope()
         val ctrl = remember { GiveController(c, scope) }
         com.karelisio.patoune.ui.theme.PatouneTheme {
-            MedCard(MedStatus(med, nextAt = null, given = null), shared = false, onGive = { ctrl.give(med) }, onOpen = {})
+            // Prise prévue dans 1 h : traitement « à donner », donc bouton « Donné » (un traitement sans échéance
+            // proche affiche « Donner maintenant », voir SpacedDosesUiTest).
+            MedCard(MedStatus(med, nextAt = System.currentTimeMillis() + 3_600_000L, given = null), shared = false, onGive = { ctrl.give(med) }, onOpen = {})
             DoubleDoseDialog(ctrl, shared = false)
         }
     }

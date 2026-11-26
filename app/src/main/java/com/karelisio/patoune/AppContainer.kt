@@ -57,7 +57,11 @@ class AppContainer(
     val sessions = SessionStore(settings, KeystoreBox())
     val api = HttpApi { sessions.load()?.let { it.server to it.token } }
     val sync = SyncEngine(api, store, db, sessions, settings, { media.dir }) { events ->
-        hooks.onRemote(events.map { it.entity }.toSet(), events.filter { it.entity == "dose" && it.field == "medicationId" }.map { it.value.toString().trim('"') }.toSet())
+        // Traitements touchés : prise nouvelle (champ medicationId) ou prise existante modifiée/supprimée (relue en base).
+        val doseEvents = events.filter { it.entity == "dose" }
+        val medIds = doseEvents.filter { it.field == "medicationId" }.map { it.value.toString().trim('"') }.toSet() +
+            doseEvents.map { it.rowId }.toSet().mapNotNull { db.doses().byId(it)?.medicationId }
+        hooks.onRemote(events.map { it.entity }.toSet(), medIds)
     }
     val household = HouseholdManager(api, store, db, sessions, settings, sync, fcmToken = { fcmToken() })
 

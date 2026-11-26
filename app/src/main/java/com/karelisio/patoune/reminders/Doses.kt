@@ -17,6 +17,15 @@ import com.karelisio.patoune.domain.LateCheck
 import com.karelisio.patoune.domain.Schedule
 import com.karelisio.patoune.domain.Stock
 import com.karelisio.patoune.domain.TakenDose
+import java.time.ZoneId
+
+/**
+ * Calendrier d'un traitement tel qu'il s'applique maintenant : le cycle des fréquences espacées repart
+ * de la dernière prise donnée (voir [Schedule.anchorFor]). Seule façon de construire le calendrier d'un
+ * traitement hors logique pure (rappels, garde-fou, accueil, widget, rapport).
+ */
+suspend fun PatouneDb.scheduleOf(med: Medication, zone: ZoneId = Dates.zone()): Schedule =
+    Schedule.of(med, zone, doses().lastGiven(med.id)?.takenAt)
 
 sealed interface DoseResult {
     data class Saved(val log: DoseLog) : DoseResult
@@ -28,14 +37,14 @@ sealed interface DoseResult {
 class Doses(private val c: AppContainer) {
 
     suspend fun alreadyGiven(med: Medication, now: Long = System.currentTimeMillis()): TakenDose? {
-        val window = DoseGuard.currentWindow(Schedule.of(med, Dates.zone()), now, med.asNeeded)
+        val window = DoseGuard.currentWindow(c.db.scheduleOf(med), now, med.asNeeded)
         val logs = c.db.doses().since(med.id, window.first).filter { it.status == DoseStatus.GIVEN }
         return DoseGuard.alreadyGiven(logs.map { TakenDose(it.takenAt, it.createdBy) }, window)
     }
 
     /** Vérification de retard : aucune prise donnée ou sautée ne couvre l'horaire [scheduledAt]. */
     suspend fun isLate(med: Medication, scheduledAt: Long, now: Long = System.currentTimeMillis()): Boolean {
-        val schedule = Schedule.of(med, Dates.zone())
+        val schedule = c.db.scheduleOf(med)
         val from = DoseGuard.currentWindow(schedule, scheduledAt).first
         val handled = c.db.doses().since(med.id, minOf(from, scheduledAt)).map { HandledDose(it.takenAt, it.scheduledAt) }
         return LateCheck.shouldAlert(schedule, med.lateMinutes, active = !med.deleted && !med.asNeeded, scheduledAt, handled, now)
@@ -52,6 +61,7 @@ class Doses(private val c: AppContainer) {
         // Prise donnée ou sautée : plus de relance « En retard » pour cet horaire.
         c.reminders.cancelLate(med.id)
         Notif.cancel(c.context, ReminderScheduler.latePushNotifId(med.id))
+        reschedule(med.id)
         c.hooks.onDose(med, log)
         return DoseResult.Saved(log)
     }
@@ -66,6 +76,7 @@ class Doses(private val c: AppContainer) {
         val r = ledger.record(med, takenAt, status, adjustStock, force)
         if (r !is DoseResult.Saved) return r
         if (status == DoseStatus.GIVEN && adjustStock) c.db.medications().byId(med.id)?.let { checkStock(it) }
+        reschedule(med.id)
         if (Backdate.isRecent(takenAt, now)) {
             Notif.cancel(c.context, ReminderScheduler.notifId(med.id))
             c.reminders.cancelLate(med.id)
@@ -80,6 +91,7 @@ class Doses(private val c: AppContainer) {
         val r = ledger.edit(old, newTakenAt, newStatus, adjustStock, force)
         if (r !is DoseResult.Saved) return r
         if (old.status != newStatus && newStatus == DoseStatus.GIVEN && adjustStock) c.db.medications().byId(old.medicationId)?.let { checkStock(it) }
+        reschedule(old.medicationId)
         c.hooks.onDataChanged()
         return r
     }
@@ -89,7 +101,13 @@ class Doses(private val c: AppContainer) {
         c.store.delete(log)
         val med = c.db.medications().byId(log.medicationId) ?: return
         if (log.status == DoseStatus.GIVEN && med.stockRemaining != null) c.store.save(med.copy(stockRemaining = Stock.increment(med.stockRemaining, med.unitsPerDose)))
+        reschedule(med.id)
         c.hooks.onDataChanged()
+    }
+
+    /** Prochain rappel recalculé : une prise (ajoutée, modifiée, annulée) déplace le cycle des fréquences espacées. */
+    private suspend fun reschedule(medId: String) {
+        c.db.medications().byId(medId)?.let { c.reminders.schedule(it) }
     }
 
     suspend fun checkStock(med: Medication) {
@@ -110,18 +128,21 @@ class Doses(private val c: AppContainer) {
 class DoseLedger(private val store: Store, private val db: PatouneDb) {
 
     /** Fenêtre du garde-fou contenant l'instant [at] : seul appel à DoseGuard, à adapter si sa signature change. */
-    private fun window(med: Medication, at: Long): LongRange =
-        DoseGuard.currentWindow(Schedule.of(med, Dates.zone()), at, med.asNeeded)
+    private fun window(schedule: Schedule, med: Medication, at: Long): LongRange =
+        DoseGuard.currentWindow(schedule, at, med.asNeeded)
 
     /**
      * Prise déjà donnée dans la même fenêtre que [at] : avant [at] (dans sa fenêtre) ou après [at]
      * (quand [at] tombe dans la fenêtre de cette prise plus récente). [exceptId] : la prise en cours de correction.
      */
     suspend fun conflict(med: Medication, at: Long, exceptId: String? = null): TakenDose? {
-        val w = window(med, at)
-        val logs = db.doses().since(med.id, minOf(w.first, at - SCAN_MS))
-            .filter { it.status == DoseStatus.GIVEN && it.id != exceptId && it.takenAt <= at + SCAN_MS }
-        return logs.filter { it.takenAt in w || at in window(med, it.takenAt) }
+        val schedule = db.scheduleOf(med)
+        val w = window(schedule, med, at)
+        // Marge au moins égale à la longueur de la fenêtre (plusieurs semaines pour un traitement espacé).
+        val scan = maxOf(SCAN_MS, w.last - w.first)
+        val logs = db.doses().since(med.id, minOf(w.first, at - scan))
+            .filter { it.status == DoseStatus.GIVEN && it.id != exceptId && it.takenAt <= at + scan }
+        return logs.filter { it.takenAt in w || at in window(schedule, med, it.takenAt) }
             .maxByOrNull { it.takenAt }?.let { TakenDose(it.takenAt, it.createdBy) }
     }
 
@@ -153,7 +174,7 @@ class DoseLedger(private val store: Store, private val db: PatouneDb) {
     }
 
     private companion object {
-        /** Marge de recherche autour de la date choisie (les fenêtres durent au plus une journée). */
+        /** Marge de recherche minimale autour de la date choisie. */
         const val SCAN_MS = 2 * 86_400_000L
     }
 }

@@ -36,6 +36,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.karelisio.patoune.container
+import com.karelisio.patoune.domain.Dates
+import com.karelisio.patoune.domain.Due
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.clip
 import com.karelisio.patoune.ui.LocalNav
 import com.karelisio.patoune.ui.MainViewModel
 import com.karelisio.patoune.ui.Routes
@@ -55,7 +60,17 @@ fun HomeScreen(vm: MainViewModel) {
     val doses by remember(animal?.id) { animal?.let { c.db.doses().observeSince(it.id, System.currentTimeMillis() - 2 * 86_400_000L) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
     val breaths by remember(animal?.id) { animal?.let { c.db.breaths().observeFor(it.id) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
     var statuses by remember { mutableStateOf(emptyList<MedStatus>()) }
-    LaunchedEffect(meds, doses) { statuses = meds.filter { !it.asNeeded }.map { medStatus(c, it) }.sortedBy { it.nextAt ?: Long.MAX_VALUE } }
+    var refresh by remember { mutableIntStateOf(0) }
+    LaunchedEffect(meds, doses, refresh) { statuses = meds.filter { !it.asNeeded }.map { medStatus(c, it) }.sortedBy { it.nextAt ?: Long.MAX_VALUE } }
+    // Une prise toute récente garde sa carte « À donner » le temps du repli ; ensuite, recalcul pour la passer « À venir ».
+    LaunchedEffect(statuses) {
+        val now = System.currentTimeMillis()
+        val until = statuses.mapNotNull { s -> s.given?.takenAt?.plus(Due.RECENT_MS)?.takeIf { it > now } }.minOrNull() ?: return@LaunchedEffect
+        delay(until - now + 1_000)
+        refresh++
+    }
+    val due = statuses.filter { it.due }
+    val upcoming = statuses.filter { !it.due }
     val scope = rememberCoroutineScope()
     val ctrl = remember { GiveController(c, scope) }
 
@@ -75,8 +90,10 @@ fun HomeScreen(vm: MainViewModel) {
                 }
             }
             item { animal?.let { a -> BreathSummaryCard(a, breaths) { nav.navigate(Routes.BreathCounter()) } } }
-            if (statuses.isNotEmpty()) item { Text(stringResource(R.string.home_due), style = MaterialTheme.typography.titleMedium) }
-            items(statuses, key = { it.med.id }) { s -> DueMedCard(s, shared, onGive = { ctrl.give(s.med) }, onOpen = { nav.navigate(Routes.MedicationDetail(s.med.id)) }) }
+            if (due.isNotEmpty()) item { Text(stringResource(R.string.home_due), style = MaterialTheme.typography.titleMedium) }
+            items(due, key = { it.med.id }) { s -> DueMedCard(s, shared, onGive = { ctrl.give(s.med) }, onOpen = { nav.navigate(Routes.MedicationDetail(s.med.id)) }) }
+            if (upcoming.isNotEmpty()) item { Text(stringResource(R.string.home_upcoming), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp)) }
+            items(upcoming, key = { "upcoming-" + it.med.id }) { s -> UpcomingMedRow(s) { nav.navigate(Routes.MedicationDetail(s.med.id)) } }
         }
     }
     DoubleDoseDialog(ctrl, shared)
@@ -91,6 +108,20 @@ fun DueMedCard(s: MedStatus, shared: Boolean, onGive: () -> Unit, onOpen: () -> 
 }
 
 
+/** Ligne compacte d'un traitement pas encore à donner : nom et prochaine échéance ; un tap ouvre la fiche. */
+@Composable
+fun UpcomingMedRow(s: MedStatus, onOpen: () -> Unit) {
+    val m = s.med
+    androidx.compose.material3.ListItem(
+        headlineContent = { Text(m.name) },
+        supportingContent = {
+            Text(s.nextAt?.let { stringResource(R.string.med_next_on, Dates.fmtDay(it), Dates.fmtTime(it)) } ?: stringResource(R.string.med_finished))
+        },
+        leadingContent = { androidx.compose.material3.Icon(m.type.icon(), null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).clickable(onClick = onOpen),
+    )
+}
 
 /** Bouton « Crise en cours » : un tap lance la vidéo et horodate. */
 @Composable

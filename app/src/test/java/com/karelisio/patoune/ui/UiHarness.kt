@@ -38,3 +38,15 @@ fun ComposeContentTestRule.setScreen(dark: Boolean? = null, dynamicColor: Boolea
         else PatouneTheme(dark = dark, dynamicColor = dynamicColor, content = content)
     }
 }
+
+/**
+ * Attente robuste sous Robolectric : à chaque essai, laisse avancer les threads Room/DataStore et vide la file
+ * du thread principal, puis évalue [condition]. Évite les échecs aléatoires quand toute la suite tourne (CI).
+ */
+fun ComposeContentTestRule.awaitUntil(timeoutMs: Long = 15_000, condition: () -> Boolean) {
+    waitUntil(timeoutMs) {
+        Thread.sleep(10)
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        condition()
+    }
+}

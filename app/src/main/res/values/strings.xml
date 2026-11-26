@@ -839,4 +839,10 @@
     <string name="doc_edit_title">Modifier le document</string>
     <string name="doc_edit_named">Modifier %1$s</string>
     <string name="doc_replace_file">Remplacer le fichier</string>
+    <!-- Prises espacées -->
+    <string name="home_upcoming">À venir</string>
+    <string name="med_next_on">Prochaine prise le %1$s à %2$s</string>
+    <string name="med_give_now">Donner maintenant</string>
+    <!-- Crise sans fantôme -->
+    <string name="crisis_draft_note">Pas encore enregistrée : filmez ou touchez Enregistrer</string>
 </resources>

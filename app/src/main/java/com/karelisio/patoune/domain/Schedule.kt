@@ -12,7 +12,8 @@ import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 
 /**
- * Fréquence normalisée d'un traitement (sans les horaires). [anchor] = date de début, qui fixe le jour
+ * Fréquence normalisée d'un traitement (sans les horaires). [anchor] = date de début (ou de la dernière
+ * prise donnée, voir [Schedule.anchorFor]), qui fixe le jour
  * de la semaine (toutes les N semaines) ou le quantième (tous les N mois).
  */
 data class Frequency(
@@ -56,7 +57,8 @@ fun Medication.normalizedFrequency(): Medication {
 /**
  * Calendrier des prises d'un traitement (logique pure) : horaires muraux [times] chaque jour actif
  * entre [start] et [end] inclus, dans le fuseau [zone]. Les jours actifs dépendent de la fréquence,
- * ancrée sur [anchor] (date de début, ou aujourd'hui si elle est vide) :
+ * ancrée sur [anchor] (date de la dernière prise donnée pour les fréquences espacées, sinon date de début,
+ * ou aujourd'hui si elle est vide) :
  * - EVERY_N_DAYS : anchor + k·N jours ;
  * - WEEKDAYS : jours cochés (aucun = tous) ;
  * - EVERY_N_WEEKS : une semaine sur N (semaines du lundi, comptées depuis celle de l'ancre), le même jour
@@ -172,11 +174,32 @@ data class Schedule(
         fun daily(times: List<LocalTime>, zone: ZoneId, start: LocalDate? = null, end: LocalDate? = null) =
             Schedule(times, zone, Frequency(), start, end)
 
-        /** Calendrier d'un traitement ; ancré sur sa date de début, ou sur [today] si elle est vide. */
-        fun of(med: Medication, zone: ZoneId, today: LocalDate = LocalDate.now(zone)): Schedule {
+        /** Calendrier d'un traitement sans tenir compte des prises ; ancré sur sa date de début, ou sur [today] si elle est vide. */
+        fun of(med: Medication, zone: ZoneId, today: LocalDate = LocalDate.now(zone)): Schedule = of(med, zone, null, today)
+
+        /**
+         * Calendrier d'un traitement en tenant compte de sa dernière prise donnée [lastGiven] (ms, ou null) :
+         * pour les fréquences espacées (tous les N jours, semaines ou mois), le cycle repart de la date de cette
+         * prise (voir [anchorFor]) ; les horaires restent ceux du traitement.
+         */
+        fun of(med: Medication, zone: ZoneId, lastGiven: Long?, today: LocalDate = LocalDate.now(zone)): Schedule {
             val start = Dates.parse(med.startDate)
             val f = Frequency.of(med)
-            return Schedule(ReminderPlanner.parseTimes(med.times), zone, f.copy(anchor = start ?: today), start, Dates.parse(med.endDate))
+            val anchor = anchorFor(f.type, start ?: today, start, lastGiven, zone)
+            return Schedule(ReminderPlanner.parseTimes(med.times), zone, f.copy(anchor = anchor), start, Dates.parse(med.endDate))
+        }
+
+        /**
+         * Ancre du cycle : pour EVERY_N_DAYS, EVERY_N_WEEKS et EVERY_N_MONTHS, la date (dans [zone]) de la
+         * dernière prise donnée, même antérieure à la date de début [start] (traitement créé après avoir été
+         * donné) ; sinon [fallback] (date de début ou aujourd'hui). Tous les jours et
+         * « certains jours » ne dépendent pas des prises : une prise en avance ou en retard ne décale rien.
+         */
+        fun anchorFor(type: FreqType, fallback: LocalDate, start: LocalDate?, lastGiven: Long?, zone: ZoneId): LocalDate {
+            if (lastGiven == null || type == FreqType.DAILY || type == FreqType.WEEKDAYS) return fallback
+            // Une prise saisie avant la date de début compte aussi : on crée souvent le traitement
+            // après l'avoir déjà donné (« donné lundi, tous les 3 mois »).
+            return Instant.ofEpochMilli(lastGiven).atZone(zone).toLocalDate()
         }
 
         /** "1,3,5" → lundi, mercredi, vendredi (valeurs invalides ignorées). */

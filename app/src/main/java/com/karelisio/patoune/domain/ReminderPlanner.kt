@@ -21,5 +21,9 @@ object ReminderPlanner {
     fun next(med: Medication, after: Long, zone: ZoneId, today: LocalDate = LocalDate.now(zone)): Long? =
         Schedule.of(med, zone, today).next(after)
 
+    /** Idem, le cycle des fréquences espacées repartant de la dernière prise donnée [lastGiven] (voir [Schedule.of]). */
+    fun next(med: Medication, after: Long, zone: ZoneId, lastGiven: Long?, today: LocalDate = LocalDate.now(zone)): Long? =
+        Schedule.of(med, zone, lastGiven, today).next(after)
+
     fun snooze(now: Long, minutes: Int = 15): Long = now + minutes * 60_000L
 }

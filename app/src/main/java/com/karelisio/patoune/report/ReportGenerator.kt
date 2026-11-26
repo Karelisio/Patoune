@@ -114,7 +114,10 @@ class ReportGenerator(private val context: Context, private val c: AppContainer)
             val dose = m.dose.ifBlank { str(m.type.labelRes) }
             val line = if (m.asNeeded) plural(R.plurals.pdf_med_as_needed, given, m.name, dose, given)
             else {
-                val exp = Adherence.expected(Schedule.of(m, zone), t0, minOf(t1, System.currentTimeMillis()))
+                // Fréquence espacée : cycle ancré sur la dernière prise donnée de la période (ou d'avant).
+                val lastGiven = doses.filter { it.medicationId == m.id && it.status == DoseStatus.GIVEN }.maxOfOrNull { it.takenAt }
+                    ?: c.db.doses().lastGiven(m.id)?.takenAt?.takeIf { it <= t1 }
+                val exp = Adherence.expected(Schedule.of(m, zone, lastGiven), t0, minOf(t1, System.currentTimeMillis()))
                 val pct = Adherence.percent(given, exp)
                 listOfNotNull(
                     plural(R.plurals.pdf_med_fixed, exp, m.name, dose, FreqText.summary(context, m), given, exp),

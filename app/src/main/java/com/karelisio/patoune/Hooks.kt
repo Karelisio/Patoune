@@ -50,11 +50,16 @@ open class Hooks(private val c: AppContainer) {
         onDataChanged()
     }
 
-    /** Données reçues d'un autre membre : rappels et widget à jour, rappels annulés si la prise est faite. */
+    /**
+     * Données reçues d'un autre membre : rappels et widget à jour, rappels annulés si la prise est faite.
+     * [medIds] : traitements dont une prise a été ajoutée, modifiée ou supprimée.
+     */
     open suspend fun onRemote(entities: Set<String>, medIds: Set<String>) {
         if ("medication" in entities) c.reminders.rescheduleAll()
         for (id in medIds) {
             val med = c.db.medications().byId(id) ?: continue
+            // Prise reçue : le cycle d'une fréquence espacée repart de cette prise (déjà fait si rescheduleAll).
+            if ("medication" !in entities) c.reminders.schedule(med)
             if (c.doses.alreadyGiven(med) != null) {
                 com.karelisio.patoune.reminders.Notif.cancel(c.context, com.karelisio.patoune.reminders.ReminderScheduler.notifId(id))
                 com.karelisio.patoune.reminders.Notif.cancel(c.context, com.karelisio.patoune.reminders.ReminderScheduler.latePushNotifId(id))

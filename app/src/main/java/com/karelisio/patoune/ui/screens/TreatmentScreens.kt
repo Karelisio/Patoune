@@ -59,6 +59,7 @@ import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -95,12 +96,13 @@ import com.karelisio.patoune.data.Medication
 import com.karelisio.patoune.data.MedicationChange
 import com.karelisio.patoune.domain.Dates
 import com.karelisio.patoune.domain.MedDiff
-import com.karelisio.patoune.domain.ReminderPlanner
+import com.karelisio.patoune.domain.Due
 import com.karelisio.patoune.domain.Schedule
 import com.karelisio.patoune.domain.normalizedFrequency
 import com.karelisio.patoune.domain.Stock
 import com.karelisio.patoune.domain.TakenDose
 import com.karelisio.patoune.reminders.DoseResult
+import com.karelisio.patoune.reminders.scheduleOf
 import com.karelisio.patoune.ui.LocalNav
 import com.karelisio.patoune.ui.MainViewModel
 import com.karelisio.patoune.ui.Routes
@@ -133,13 +135,30 @@ fun MedType.icon(): ImageVector = when (this) {
 }
 
 
-/** État d'un traitement pour l'affichage : prochaine prise et prise déjà faite dans la fenêtre. */
-data class MedStatus(val med: Medication, val nextAt: Long?, val given: TakenDose?)
+/**
+ * État d'un traitement pour l'affichage, calculé à l'instant [at] : prochaine prise [nextAt], prise déjà faite
+ * dans la fenêtre du garde-fou [given], dernière occurrence prévue [currentAt] (null : pas encore commencé).
+ */
+data class MedStatus(
+    val med: Medication,
+    val nextAt: Long?,
+    val given: TakenDose?,
+    val currentAt: Long? = null,
+    val at: Long = System.currentTimeMillis(),
+) {
+    /** À donner au moment du calcul (voir [isDue]). */
+    val due: Boolean get() = isDue(this, at)
+}
 
-suspend fun medStatus(c: AppContainer, med: Medication): MedStatus {
-    val now = System.currentTimeMillis()
-    val next = ReminderPlanner.next(med, now - 30 * 60_000L, Dates.zone())
-    return MedStatus(med, next, c.doses.alreadyGiven(med, now))
+/** À donner : toujours pour un traitement « si besoin », sinon selon l'échéance (voir [Due.isDue]). */
+fun isDue(status: MedStatus, now: Long): Boolean =
+    status.med.asNeeded || Due.isDue(status.nextAt, status.currentAt, status.given?.takenAt, now)
+
+suspend fun medStatus(c: AppContainer, med: Medication, now: Long = System.currentTimeMillis()): MedStatus {
+    val schedule = c.db.scheduleOf(med)
+    val given = c.doses.alreadyGiven(med, now)
+    val next = Due.nextOpen(schedule, now - 30 * 60_000L, given?.takenAt)
+    return MedStatus(med, next, given, schedule.previous(now + 1), now)
 }
 
 /** Gère le clic « Donné » avec le garde-fou double dose (dialogue de confirmation). */
@@ -183,16 +202,22 @@ fun MedCard(status: MedStatus, shared: Boolean, onGive: () -> Unit, onOpen: () -
                 val dose = m.dose.ifBlank { stringResource(m.type.labelRes) }
                 Text(if (m.asNeeded) dose else stringResource(R.string.pair_dot, dose, FreqText.summary(ctx, m)),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                val line = status.given?.let { g ->
+                val next = status.nextAt
+                val line = if (!status.due) {
+                    // Pas encore à donner (fréquence espacée, prise déjà faite) : l'échéance plutôt que la dernière prise.
+                    next?.let { stringResource(R.string.med_next_on, Dates.fmtDay(it), Dates.fmtTime(it)) } ?: stringResource(R.string.med_finished)
+                } else status.given?.let { g ->
                     // Fenêtre longue (hebdomadaire, mensuel) : la prise peut dater d'un autre jour.
                     val at = if (Dates.localDate(g.takenAt) == Dates.today()) Dates.fmtTime(g.takenAt) else Dates.fmtDayTime(g.takenAt)
                     if (shared && g.by.isNotBlank()) stringResource(R.string.med_given_at_by, at, g.by)
                     else stringResource(R.string.med_given_at, at)
                 } ?: if (m.asNeeded) stringResource(R.string.med_as_needed)
-                else status.nextAt?.let { stringResource(R.string.med_next_at, Dates.fmtDayTime(it)) } ?: stringResource(R.string.med_finished)
+                else next?.let { stringResource(R.string.med_next_at, Dates.fmtDayTime(it)) } ?: stringResource(R.string.med_finished)
                 Text(line, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
-            DoneButton(done = status.given != null, onClick = onGive)
+            if (status.due) DoneButton(done = status.given != null, onClick = onGive)
+            // Prise hors échéance possible (avance, vétérinaire) mais discrète ; le garde-fou reste actif via GiveController.
+            else FilledTonalButton(onClick = onGive) { Text(stringResource(R.string.med_give_now)) }
         }
         if (m.stockRemaining != null) {
             val low = Stock.isLow(m.stockRemaining, m.stockAlertAt)

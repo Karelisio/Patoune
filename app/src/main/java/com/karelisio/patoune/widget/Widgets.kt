@@ -52,7 +52,7 @@ import com.karelisio.patoune.container
 import com.karelisio.patoune.data.DoseStatus
 import com.karelisio.patoune.domain.Breath
 import com.karelisio.patoune.domain.Dates
-import com.karelisio.patoune.domain.ReminderPlanner
+import com.karelisio.patoune.reminders.scheduleOf
 import com.karelisio.patoune.reminders.DoseResult
 import com.karelisio.patoune.reminders.Notif
 
@@ -88,7 +88,7 @@ class PatouneWidget : GlanceAppWidget() {
         val now = System.currentTimeMillis()
         val meds = c.db.medications().active().filter { it.animalId == a.id && !it.asNeeded }
         val next = meds.mapNotNull { m ->
-            ReminderPlanner.next(m, now - 30 * 60_000L, Dates.zone())?.let { m to it }
+            c.db.scheduleOf(m).next(now - 30 * 60_000L)?.let { m to it }
         }.minByOrNull { it.second }
         val given = next?.let { c.doses.alreadyGiven(it.first, now) }
         val last = c.db.breaths().latest(a.id)
