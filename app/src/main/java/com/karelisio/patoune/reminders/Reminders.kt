@@ -35,7 +35,7 @@ class ReminderScheduler(private val context: Context) {
             schedule(med)
             // Après un redémarrage : ré-armer la vérif retard de l'horaire qui vient de passer.
             if (!med.asNeeded && med.lateMinutes > 0) {
-                ReminderPlanner.next(ReminderPlanner.parseTimes(med.times), now - med.lateMinutes * 60_000L, Dates.zone(), Dates.parse(med.startDate), Dates.parse(med.endDate))
+                ReminderPlanner.next(med, now - med.lateMinutes * 60_000L, Dates.zone())
                     ?.takeIf { it <= now }?.let { scheduleLate(med, it, now) }
             }
         }
@@ -44,7 +44,7 @@ class ReminderScheduler(private val context: Context) {
     fun schedule(med: Medication, after: Long = System.currentTimeMillis()) {
         cancelReminder(med.id)
         if (med.deleted || med.asNeeded) { cancelLate(med.id); return }
-        val at = ReminderPlanner.next(ReminderPlanner.parseTimes(med.times), after, Dates.zone(), Dates.parse(med.startDate), Dates.parse(med.endDate)) ?: return
+        val at = ReminderPlanner.next(med, after, Dates.zone()) ?: return
         setAlarm(pending(med.id, at), at, med.alarmStyle)
     }
 

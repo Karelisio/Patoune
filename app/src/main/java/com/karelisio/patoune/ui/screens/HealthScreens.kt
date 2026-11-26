@@ -69,8 +69,13 @@ import com.karelisio.patoune.data.DocKind
 import com.karelisio.patoune.data.HealthDocument
 import com.karelisio.patoune.data.VetVisit
 import com.karelisio.patoune.data.WeightEntry
+import com.karelisio.patoune.domain.CareRenewal
 import com.karelisio.patoune.domain.Dates
 import com.karelisio.patoune.domain.newId
+import androidx.compose.material3.FilterChip
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.karelisio.patoune.ui.LocalNav
 import com.karelisio.patoune.ui.MainViewModel
 import com.karelisio.patoune.ui.Routes
@@ -143,19 +148,31 @@ fun HealthScreen(vm: MainViewModel) {
 private fun CareList(animalId: String, onEdit: (CareItem) -> Unit) {
     val c = LocalContext.current.container
     val items by remember(animalId) { c.db.care().observeFor(animalId) }.collectAsState(emptyList())
+    val scope = rememberCoroutineScope()
+    // Seule l'entrée la plus récente d'un produit porte l'échéance en cours ; les anciennes restent pour l'historique.
+    val latest = remember(items) { CareRenewal.latestIds(items) }
     LazyColumn(contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (items.isEmpty()) item { EmptyState(Icons.Rounded.Vaccines, stringResource(R.string.health_care_empty), stringResource(R.string.health_care_empty_body)) }
         items(items, key = { it.id }) { ci ->
             val due = Dates.parse(ci.nextDue)
-            val late = due != null && !due.isAfter(Dates.today())
+            val current = ci.id in latest
+            val late = current && due != null && !due.isAfter(Dates.today())
+            val title = stringResource(R.string.pair_dot, stringResource(ci.kind.labelRes), ci.name)
+            val doneLabel = stringResource(R.string.care_done_today_a11y, title)
             ListItem(
                 modifier = Modifier.cascade(items.indexOf(ci)).clickable { onEdit(ci) },
                 leadingContent = { ShapeBadge(ci.kind.icon(), PawShapes.clover, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, 40.dp) },
-                headlineContent = { Text(stringResource(R.string.pair_dot, stringResource(ci.kind.labelRes), ci.name)) },
+                headlineContent = { Text(title) },
                 supportingContent = {
                     Text(if (due != null) stringResource(R.string.health_care_done_due, Dates.fmtDay(ci.date), Dates.fmtDay(ci.nextDue)) else stringResource(R.string.health_care_done, Dates.fmtDay(ci.date)),
                         color = if (late) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                 },
+                trailingContent = if (current && ci.repeatMonths != null) {
+                    {
+                        TextButton(onClick = { scope.launch { c.store.save(CareRenewal.doneToday(ci, Dates.today())) } },
+                            modifier = Modifier.semantics { contentDescription = doneLabel }) { Text(stringResource(R.string.care_done_today)) }
+                    }
+                } else null,
             )
         }
     }
@@ -172,9 +189,21 @@ private fun CareSheet(initial: CareItem, onDismiss: () -> Unit) {
         Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ChoiceChips(CareKind.entries, ci.kind, { stringResource(it.labelRes) }) { ci = ci.copy(kind = it) }
             Field(ci.name, { ci = ci.copy(name = it) }, stringResource(R.string.health_care_product))
-            DateField(ci.date, { ci = ci.copy(date = it ?: Dates.today().toString()) }, stringResource(R.string.field_date), clearable = false)
-            DateField(ci.nextDue, { ci = ci.copy(nextDue = it) }, stringResource(R.string.health_care_next_due))
+            // Soin récurrent : l'échéance suit la date du soin.
+            DateField(ci.date, { ci = CareRenewal.withComputedDue(ci.copy(date = it ?: Dates.today().toString())) }, stringResource(R.string.field_date), clearable = false)
+            Text(stringResource(R.string.care_repeat), style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(ci.repeatMonths == null, { ci = ci.copy(repeatMonths = null) }, { Text(stringResource(R.string.care_repeat_none)) })
+                CareRenewal.choices.forEach { mo ->
+                    FilterChip(ci.repeatMonths == mo, { ci = CareRenewal.withComputedDue(ci.copy(repeatMonths = mo)) },
+                        { Text(pluralStringResource(R.plurals.care_repeat_months, mo, mo)) })
+                }
+            }
+            if (ci.repeatMonths != null) {
+                Text(stringResource(R.string.care_repeat_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            DateField(ci.nextDue, { ci = ci.copy(nextDue = it) }, stringResource(R.string.health_care_next_due))
+            if (ci.repeatMonths == null) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(1L to R.string.health_plus_1_month, 3L to R.string.health_plus_3_months, 12L to R.string.health_plus_1_year).forEach { (m, l) ->
                     AssistChip({ ci = ci.copy(nextDue = (Dates.parse(ci.date) ?: Dates.today()).plusMonths(m).toString()) }, { Text(stringResource(l)) })
                 }

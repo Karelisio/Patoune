@@ -328,7 +328,7 @@
     <string name="emergency_current_treatment">Traitement en cours</string>
     <string name="emergency_none">Aucun</string>
     <string name="emergency_med_as_needed">• %1$s — %2$s (si besoin)</string>
-    <string name="emergency_med_times">• %1$s — %2$s à %3$s</string>
+    <string name="emergency_med_times">• %1$s — %2$s · %3$s</string>
     <string name="emergency_key_info">Infos clés</string>
     <string name="emergency_allergies">Allergies : %1$s</string>
     <string name="emergency_no_allergy">aucune connue</string>
@@ -708,9 +708,9 @@
         <item quantity="other">%1$s (%2$s, si besoin) : %3$d prises</item>
     </plurals>
     <plurals name="pdf_med_fixed">
-        <item quantity="one">%1$s (%2$s, %3$s) : %4$d / %5$d prise</item>
-        <item quantity="many">%1$s (%2$s, %3$s) : %4$d / %5$d prises</item>
-        <item quantity="other">%1$s (%2$s, %3$s) : %4$d / %5$d prises</item>
+        <item quantity="one">%1$s (%2$s · %3$s) : %4$d / %5$d prise</item>
+        <item quantity="many">%1$s (%2$s · %3$s) : %4$d / %5$d prises</item>
+        <item quantity="other">%1$s (%2$s · %3$s) : %4$d / %5$d prises</item>
     </plurals>
     <string name="pdf_adherence">observance %1$d %%</string>
     <plurals name="pdf_skipped">
@@ -756,4 +756,64 @@
     <string name="tile_breath">Respirations</string>
     <string name="crisis_widget_label">Crise en cours</string>
     <string name="crisis_widget_description">Un tap pour filmer une crise et l\'horodater</string>
+
+    <!-- Fréquences -->
+    <string name="freq_title">Fréquence</string>
+    <string name="freq_type_daily">Tous les jours</string>
+    <string name="freq_type_every_n_days">Tous les X jours</string>
+    <string name="freq_type_weekdays">Certains jours</string>
+    <string name="freq_type_every_n_weeks">Toutes les X semaines</string>
+    <string name="freq_type_every_n_months">Tous les X mois</string>
+    <string name="freq_interval_days">X (nombre de jours)</string>
+    <string name="freq_interval_weeks">X (nombre de semaines)</string>
+    <string name="freq_interval_months">X (nombre de mois)</string>
+    <string name="freq_weeks_days_hint">Jours de la semaine (sinon, le même jour que la date de début)</string>
+    <string name="freq_month_hint">Le %1$d du mois, d\'après la date de début (ramené au dernier jour des mois plus courts).</string>
+    <string name="freq_daily">Tous les jours</string>
+    <string name="freq_weekly">Toutes les semaines</string>
+    <string name="freq_monthly">Tous les mois</string>
+    <plurals name="freq_every_n_days">
+        <item quantity="one">Tous les %d jours</item>
+        <item quantity="many">Tous les %d jours</item>
+        <item quantity="other">Tous les %d jours</item>
+    </plurals>
+    <plurals name="freq_every_n_weeks">
+        <item quantity="one">Toutes les %d semaines</item>
+        <item quantity="many">Toutes les %d semaines</item>
+        <item quantity="other">Toutes les %d semaines</item>
+    </plurals>
+    <plurals name="freq_every_n_months">
+        <item quantity="one">Tous les %d mois</item>
+        <item quantity="many">Tous les %d mois</item>
+        <item quantity="other">Tous les %d mois</item>
+    </plurals>
+    <string name="freq_with_detail">%1$s, %2$s</string>
+    <string name="freq_on_weekday">le %1$s</string>
+    <string name="freq_on_month_day">le %1$d</string>
+    <string name="freq_at">%1$s à %2$s</string>
+    <string name="freq_at_after_detail">%1$s, à %2$s</string>
+    <string name="day_short_mon">lun</string>
+    <string name="day_short_tue">mar</string>
+    <string name="day_short_wed">mer</string>
+    <string name="day_short_thu">jeu</string>
+    <string name="day_short_fri">ven</string>
+    <string name="day_short_sat">sam</string>
+    <string name="day_short_sun">dim</string>
+    <string name="day_full_mon">lundi</string>
+    <string name="day_full_tue">mardi</string>
+    <string name="day_full_wed">mercredi</string>
+    <string name="day_full_thu">jeudi</string>
+    <string name="day_full_fri">vendredi</string>
+    <string name="day_full_sat">samedi</string>
+    <string name="day_full_sun">dimanche</string>
+    <string name="care_repeat">Renouveler</string>
+    <string name="care_repeat_none">Non</string>
+    <plurals name="care_repeat_months">
+        <item quantity="one">%d mois</item>
+        <item quantity="many">%d mois</item>
+        <item quantity="other">%d mois</item>
+    </plurals>
+    <string name="care_repeat_hint">Le prochain rappel est calculé depuis la date du soin.</string>
+    <string name="care_done_today">Fait aujourd\'hui</string>
+    <string name="care_done_today_a11y">Marquer %1$s comme fait aujourd\'hui</string>
 </resources>

@@ -17,12 +17,7 @@ object LateCheck {
         return (scheduledAt + lateMinutes * 60_000L).takeIf { it > now }
     }
 
-    /**
-     * Faut-il signaler la prise prévue à [scheduledAt] comme en retard ?
-     * Non si le traitement n'a plus de rappel ([active] faux : supprimé ou « si besoin »), si le délai vaut 0,
-     * si une prise donnée ou sautée couvre cet horaire (même fenêtre que le garde-fou double dose),
-     * ou si l'horaire suivant est déjà arrivé (son propre rappel prend le relais).
-     */
+    /** Variante pour des horaires quotidiens (ancienne API). */
     fun shouldAlert(
         times: List<LocalTime>,
         zone: ZoneId,
@@ -31,11 +26,27 @@ object LateCheck {
         scheduledAt: Long,
         handled: List<HandledDose>,
         now: Long,
+    ): Boolean = shouldAlert(Schedule.daily(times, zone), lateMinutes, active, scheduledAt, handled, now)
+
+    /**
+     * Faut-il signaler la prise prévue à [scheduledAt] comme en retard ?
+     * Non si le traitement n'a plus de rappel ([active] faux : supprimé ou « si besoin »), si le délai vaut 0,
+     * si une prise donnée ou sautée couvre cet horaire (même fenêtre que le garde-fou double dose, qui s'étend
+     * sur ~2 semaines pour un traitement mensuel), ou si l'occurrence suivante est déjà arrivée
+     * (son propre rappel prend le relais).
+     */
+    fun shouldAlert(
+        schedule: Schedule,
+        lateMinutes: Int,
+        active: Boolean,
+        scheduledAt: Long,
+        handled: List<HandledDose>,
+        now: Long,
     ): Boolean {
-        if (!active || lateMinutes <= 0 || times.isEmpty()) return false
-        val next = ReminderPlanner.next(times, scheduledAt, zone, null, null)
+        if (!active || lateMinutes <= 0 || schedule.times.isEmpty()) return false
+        val next = schedule.unbounded().next(scheduledAt)
         if (next != null && now >= next) return false
-        val windowStart = DoseGuard.currentWindow(times, scheduledAt, zone).first
+        val windowStart = DoseGuard.currentWindow(schedule, scheduledAt).first
         return handled.none { it.scheduledAt == scheduledAt || it.takenAt in windowStart..now }
     }
 }

@@ -4,6 +4,14 @@ import com.karelisio.patoune.ui.unitsPerDose
 import com.karelisio.patoune.ui.unitQty
 import com.karelisio.patoune.ui.fmtQty
 import com.karelisio.patoune.ui.MedDiffText
+import com.karelisio.patoune.ui.FreqText
+import com.karelisio.patoune.data.FreqType
+import com.karelisio.patoune.domain.Frequency
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.FilterChip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import java.time.DayOfWeek
 import com.karelisio.patoune.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
@@ -77,6 +85,8 @@ import com.karelisio.patoune.data.MedicationChange
 import com.karelisio.patoune.domain.Dates
 import com.karelisio.patoune.domain.MedDiff
 import com.karelisio.patoune.domain.ReminderPlanner
+import com.karelisio.patoune.domain.Schedule
+import com.karelisio.patoune.domain.normalizedFrequency
 import com.karelisio.patoune.domain.Stock
 import com.karelisio.patoune.domain.TakenDose
 import com.karelisio.patoune.reminders.DoseResult
@@ -117,7 +127,7 @@ data class MedStatus(val med: Medication, val nextAt: Long?, val given: TakenDos
 
 suspend fun medStatus(c: AppContainer, med: Medication): MedStatus {
     val now = System.currentTimeMillis()
-    val next = ReminderPlanner.next(ReminderPlanner.parseTimes(med.times), now - 30 * 60_000L, Dates.zone(), Dates.parse(med.startDate), Dates.parse(med.endDate))
+    val next = ReminderPlanner.next(med, now - 30 * 60_000L, Dates.zone())
     return MedStatus(med, next, c.doses.alreadyGiven(med, now))
 }
 
@@ -152,16 +162,21 @@ fun DoubleDoseDialog(ctrl: GiveController, shared: Boolean, onSaved: () -> Unit 
 @Composable
 fun MedCard(status: MedStatus, shared: Boolean, onGive: () -> Unit, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val m = status.med
+    val ctx = LocalContext.current
     SectionCard(modifier.sharedKey("med-${m.id}").clickable(onClick = onOpen)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ShapeBadge(m.type.icon(), PawShapes.pad, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(m.name, style = MaterialTheme.typography.titleMedium)
-                Text(m.dose.ifBlank { stringResource(m.type.labelRes) }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val dose = m.dose.ifBlank { stringResource(m.type.labelRes) }
+                Text(if (m.asNeeded) dose else stringResource(R.string.pair_dot, dose, FreqText.summary(ctx, m)),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val line = status.given?.let { g ->
-                    if (shared && g.by.isNotBlank()) stringResource(R.string.med_given_at_by, Dates.fmtTime(g.takenAt), g.by)
-                    else stringResource(R.string.med_given_at, Dates.fmtTime(g.takenAt))
+                    // Fenêtre longue (hebdomadaire, mensuel) : la prise peut dater d'un autre jour.
+                    val at = if (Dates.localDate(g.takenAt) == Dates.today()) Dates.fmtTime(g.takenAt) else Dates.fmtDayTime(g.takenAt)
+                    if (shared && g.by.isNotBlank()) stringResource(R.string.med_given_at_by, at, g.by)
+                    else stringResource(R.string.med_given_at, at)
                 } ?: if (m.asNeeded) stringResource(R.string.med_as_needed)
                 else status.nextAt?.let { stringResource(R.string.med_next_at, Dates.fmtDayTime(it)) } ?: stringResource(R.string.med_finished)
                 Text(line, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -172,7 +187,6 @@ fun MedCard(status: MedStatus, shared: Boolean, onGive: () -> Unit, onOpen: () -
             val low = Stock.isLow(m.stockRemaining, m.stockAlertAt)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Inventory2, null, Modifier.padding(end = 6.dp), tint = if (low) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline)
-                val ctx = LocalContext.current
                 Text(stringResource(if (low) R.string.med_stock_low else R.string.med_stock, unitQty(ctx, m.type, m.stockRemaining)),
                     style = MaterialTheme.typography.labelMedium, color = if (low) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -234,8 +248,10 @@ fun MedicationEditScreen(vm: MainViewModel, id: String?) {
                 Switch(m.asNeeded, { m = m.copy(asNeeded = it) })
             }
             if (!m.asNeeded) {
+                FrequencyEditor(m, resetKey = original?.id) { m = it }
                 Text(stringResource(R.string.med_change_times), style = MaterialTheme.typography.titleMedium)
                 TimesEditor(m.times) { m = m.copy(times = it) }
+                Text(FreqText.summary(ctx, m.normalizedFrequency()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.med_alarm_style), Modifier.weight(1f))
                     Switch(m.alarmStyle, { m = m.copy(alarmStyle = it) })
@@ -266,7 +282,7 @@ fun MedicationEditScreen(vm: MainViewModel, id: String?) {
                 onClick = {
                     scope.launch {
                         val aid = m.animalId.ifEmpty { animal?.id ?: return@launch }
-                        val saved = c.store.save(m.copy(animalId = aid, name = m.name.ifBlank { res.getString(m.type.labelRes) },
+                        val saved = c.store.save(m.normalizedFrequency().copy(animalId = aid, name = m.name.ifBlank { res.getString(m.type.labelRes) },
                             stockRemaining = if (trackStock) m.stockRemaining ?: 0.0 else null, stockAlertAt = if (trackStock) m.stockAlertAt else null))
                         // Résumé enregistré (et synchronisé) dans la langue de la personne qui modifie.
                         val changes = MedDiffText.lines(ctx, saved.type, MedDiff.diff(original, saved))
@@ -280,6 +296,52 @@ fun MedicationEditScreen(vm: MainViewModel, id: String?) {
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.action_save)) }
         }
+    }
+}
+
+/**
+ * Section « Fréquence » : puces de type, nombre X quand il sert, jours de la semaine (certains jours,
+ * et en option pour « toutes les X semaines »), rappel du quantième pour les traitements mensuels.
+ */
+@Composable
+private fun FrequencyEditor(m: Medication, resetKey: String?, onChange: (Medication) -> Unit) {
+    val ctx = LocalContext.current
+    Text(stringResource(R.string.freq_title), style = MaterialTheme.typography.titleMedium)
+    ChoiceChips(FreqType.entries, m.freqType, { FreqText.typeLabel(ctx, it) }) { onChange(m.copy(freqType = it)) }
+    val intervalLabel = when (m.freqType) {
+        FreqType.EVERY_N_DAYS -> R.string.freq_interval_days
+        FreqType.EVERY_N_WEEKS -> R.string.freq_interval_weeks
+        FreqType.EVERY_N_MONTHS -> R.string.freq_interval_months
+        else -> null
+    }
+    if (intervalLabel != null) {
+        // Clé : le champ se réinitialise au chargement du traitement et au changement de type.
+        key(resetKey, m.freqType) {
+            NumberField(m.freqInterval.toDouble(), { v -> onChange(m.copy(freqInterval = v?.toInt()?.coerceIn(1, Frequency.MAX_INTERVAL) ?: 1)) },
+                stringResource(intervalLabel))
+        }
+    }
+    if (m.freqType == FreqType.WEEKDAYS || m.freqType == FreqType.EVERY_N_WEEKS) {
+        if (m.freqType == FreqType.EVERY_N_WEEKS) {
+            Text(stringResource(R.string.freq_weeks_days_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        val selected = Schedule.parseWeekdays(m.weekdays)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DayOfWeek.entries.forEach { d ->
+                val full = FreqText.dayFull(ctx, d)
+                FilterChip(
+                    selected = d in selected,
+                    onClick = { onChange(m.copy(weekdays = Schedule.weekdaysCsv(if (d in selected) selected - d else selected + d))) },
+                    label = { Text(FreqText.dayShort(ctx, d)) },
+                    // TalkBack : nom complet du jour (l'état coché est annoncé par la puce).
+                    modifier = Modifier.semantics { contentDescription = full },
+                )
+            }
+        }
+    }
+    if (m.freqType == FreqType.EVERY_N_MONTHS) {
+        val day = (Dates.parse(m.startDate) ?: Dates.today()).dayOfMonth
+        Text(stringResource(R.string.freq_month_hint, day), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -312,7 +374,7 @@ fun MedicationDetailScreen(vm: MainViewModel, id: String) {
             if (m.stockRemaining != null) item {
                 SectionCard {
                     Text(stringResource(R.string.med_stock_title), style = MaterialTheme.typography.titleMedium)
-                    val days = Stock.daysLeft(m.stockRemaining, m.unitsPerDose, ReminderPlanner.parseTimes(m.times).size)
+                    val days = Stock.daysLeft(m.stockRemaining, m.unitsPerDose, Schedule.of(m, Dates.zone()))
                     val left = unitQty(ctx, m.type, m.stockRemaining)
                     Text(days?.let { stringResource(R.string.med_stock_left_days, left, pluralStringResource(R.plurals.days_about, it, it)) }
                         ?: stringResource(R.string.med_stock_left, left))

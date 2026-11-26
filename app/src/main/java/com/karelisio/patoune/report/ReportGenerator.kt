@@ -3,6 +3,7 @@ package com.karelisio.patoune.report
 import com.karelisio.patoune.ui.screens.fmtDuration
 import com.karelisio.patoune.data.CrisisTypes
 import com.karelisio.patoune.ui.Labels
+import com.karelisio.patoune.ui.FreqText
 import com.karelisio.patoune.ui.InsightsText
 import com.karelisio.patoune.R
 import android.content.Context
@@ -27,7 +28,7 @@ import com.karelisio.patoune.domain.Adherence
 import com.karelisio.patoune.domain.Breath
 import com.karelisio.patoune.domain.Dates
 import com.karelisio.patoune.domain.Insights
-import com.karelisio.patoune.domain.ReminderPlanner
+import com.karelisio.patoune.domain.Schedule
 import com.karelisio.patoune.media.VideoCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -113,10 +114,10 @@ class ReportGenerator(private val context: Context, private val c: AppContainer)
             val dose = m.dose.ifBlank { str(m.type.labelRes) }
             val line = if (m.asNeeded) plural(R.plurals.pdf_med_as_needed, given, m.name, dose, given)
             else {
-                val exp = Adherence.expected(ReminderPlanner.parseTimes(m.times), Dates.parse(m.startDate), Dates.parse(m.endDate), t0, minOf(t1, System.currentTimeMillis()), zone)
+                val exp = Adherence.expected(Schedule.of(m, zone), t0, minOf(t1, System.currentTimeMillis()))
                 val pct = Adherence.percent(given, exp)
                 listOfNotNull(
-                    plural(R.plurals.pdf_med_fixed, exp, m.name, dose, m.times.replace(",", ", "), given, exp),
+                    plural(R.plurals.pdf_med_fixed, exp, m.name, dose, FreqText.summary(context, m), given, exp),
                     pct?.let { str(R.string.pdf_adherence, it) },
                     if (skipped > 0) plural(R.plurals.pdf_skipped, skipped, skipped) else null,
                 ).joinToString(" · ")

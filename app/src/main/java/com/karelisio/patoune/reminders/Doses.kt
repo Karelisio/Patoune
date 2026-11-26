@@ -11,7 +11,7 @@ import com.karelisio.patoune.domain.Dates
 import com.karelisio.patoune.domain.DoseGuard
 import com.karelisio.patoune.domain.HandledDose
 import com.karelisio.patoune.domain.LateCheck
-import com.karelisio.patoune.domain.ReminderPlanner
+import com.karelisio.patoune.domain.Schedule
 import com.karelisio.patoune.domain.Stock
 import com.karelisio.patoune.domain.TakenDose
 
@@ -25,17 +25,17 @@ sealed interface DoseResult {
 class Doses(private val c: AppContainer) {
 
     suspend fun alreadyGiven(med: Medication, now: Long = System.currentTimeMillis()): TakenDose? {
-        val window = DoseGuard.currentWindow(ReminderPlanner.parseTimes(med.times), now, Dates.zone(), med.asNeeded)
+        val window = DoseGuard.currentWindow(Schedule.of(med, Dates.zone()), now, med.asNeeded)
         val logs = c.db.doses().since(med.id, window.first).filter { it.status == DoseStatus.GIVEN }
         return DoseGuard.alreadyGiven(logs.map { TakenDose(it.takenAt, it.createdBy) }, window)
     }
 
     /** Vérification de retard : aucune prise donnée ou sautée ne couvre l'horaire [scheduledAt]. */
     suspend fun isLate(med: Medication, scheduledAt: Long, now: Long = System.currentTimeMillis()): Boolean {
-        val times = ReminderPlanner.parseTimes(med.times)
-        val from = DoseGuard.currentWindow(times, scheduledAt, Dates.zone()).first
+        val schedule = Schedule.of(med, Dates.zone())
+        val from = DoseGuard.currentWindow(schedule, scheduledAt).first
         val handled = c.db.doses().since(med.id, minOf(from, scheduledAt)).map { HandledDose(it.takenAt, it.scheduledAt) }
-        return LateCheck.shouldAlert(times, Dates.zone(), med.lateMinutes, active = !med.deleted && !med.asNeeded, scheduledAt, handled, now)
+        return LateCheck.shouldAlert(schedule, med.lateMinutes, active = !med.deleted && !med.asNeeded, scheduledAt, handled, now)
     }
 
     suspend fun give(med: Medication, status: DoseStatus, scheduledAt: Long? = null, force: Boolean = false): DoseResult {

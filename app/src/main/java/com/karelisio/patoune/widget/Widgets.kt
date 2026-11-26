@@ -88,7 +88,7 @@ class PatouneWidget : GlanceAppWidget() {
         val now = System.currentTimeMillis()
         val meds = c.db.medications().active().filter { it.animalId == a.id && !it.asNeeded }
         val next = meds.mapNotNull { m ->
-            ReminderPlanner.next(ReminderPlanner.parseTimes(m.times), now - 30 * 60_000L, Dates.zone(), Dates.parse(m.startDate), Dates.parse(m.endDate))?.let { m to it }
+            ReminderPlanner.next(m, now - 30 * 60_000L, Dates.zone())?.let { m to it }
         }.minByOrNull { it.second }
         val given = next?.let { c.doses.alreadyGiven(it.first, now) }
         val last = c.db.breaths().latest(a.id)
