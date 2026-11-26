@@ -813,4 +813,6 @@
     <string name="home_upcoming">Upcoming</string>
     <string name="med_next_on">Next dose on %1$s at %2$s</string>
     <string name="med_give_now">Give now</string>
+    <!-- Crise sans fantôme -->
+    <string name="crisis_draft_note">Not saved yet: film or tap Save</string>
 </resources>
