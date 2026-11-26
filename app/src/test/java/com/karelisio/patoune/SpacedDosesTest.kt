@@ -62,11 +62,11 @@ class SpacedDosesTest {
         }
     }
 
-    @Test fun doseBeforeStartDateIsIgnored() {
-        // Nouvelle cure commencée le 1er novembre : la prise du 20 octobre (cure précédente) ne déplace rien.
-        val m = med(FreqType.EVERY_N_MONTHS, 3, start = "2026-11-01")
-        val old = at(2026, 10, 20, 9)
-        assertEquals("2027-02-01T09:00", local(Schedule.of(m, z, old, today).next(at(2026, 11, 26, 12))!!))
+    @Test fun doseBeforeStartDateStillAnchors() {
+        // Cas signalé : traitement créé aujourd'hui (début = aujourd'hui), prise saisie après coup pour lundi dernier.
+        val m = med(FreqType.EVERY_N_MONTHS, 3, start = "2026-11-26")
+        val monday = at(2026, 11, 23, 9)
+        assertEquals("2027-02-23T09:00", local(Schedule.of(m, z, monday, today).next(at(2026, 11, 26, 12))!!))
     }
 
     @Test fun doseJustGivenIsAlwaysInTheCurrentWindow() {

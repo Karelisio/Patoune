@@ -191,14 +191,15 @@ data class Schedule(
 
         /**
          * Ancre du cycle : pour EVERY_N_DAYS, EVERY_N_WEEKS et EVERY_N_MONTHS, la date (dans [zone]) de la
-         * dernière prise donnée si elle n'est pas antérieure à la date de début [start] (une prise d'une cure
-         * précédente ne compte pas) ; sinon [fallback] (date de début ou aujourd'hui). Tous les jours et
+         * dernière prise donnée, même antérieure à la date de début [start] (traitement créé après avoir été
+         * donné) ; sinon [fallback] (date de début ou aujourd'hui). Tous les jours et
          * « certains jours » ne dépendent pas des prises : une prise en avance ou en retard ne décale rien.
          */
         fun anchorFor(type: FreqType, fallback: LocalDate, start: LocalDate?, lastGiven: Long?, zone: ZoneId): LocalDate {
             if (lastGiven == null || type == FreqType.DAILY || type == FreqType.WEEKDAYS) return fallback
-            val day = Instant.ofEpochMilli(lastGiven).atZone(zone).toLocalDate()
-            return if (start != null && day.isBefore(start)) fallback else day
+            // Une prise saisie avant la date de début compte aussi : on crée souvent le traitement
+            // après l'avoir déjà donné (« donné lundi, tous les 3 mois »).
+            return Instant.ofEpochMilli(lastGiven).atZone(zone).toLocalDate()
         }
 
         /** "1,3,5" → lundi, mercredi, vendredi (valeurs invalides ignorées). */

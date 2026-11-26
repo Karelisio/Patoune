@@ -138,8 +138,10 @@ class DoseLedger(private val store: Store, private val db: PatouneDb) {
     suspend fun conflict(med: Medication, at: Long, exceptId: String? = null): TakenDose? {
         val schedule = db.scheduleOf(med)
         val w = window(schedule, med, at)
-        val logs = db.doses().since(med.id, minOf(w.first, at - SCAN_MS))
-            .filter { it.status == DoseStatus.GIVEN && it.id != exceptId && it.takenAt <= at + SCAN_MS }
+        // Marge au moins égale à la longueur de la fenêtre (plusieurs semaines pour un traitement espacé).
+        val scan = maxOf(SCAN_MS, w.last - w.first)
+        val logs = db.doses().since(med.id, minOf(w.first, at - scan))
+            .filter { it.status == DoseStatus.GIVEN && it.id != exceptId && it.takenAt <= at + scan }
         return logs.filter { it.takenAt in w || at in window(schedule, med, it.takenAt) }
             .maxByOrNull { it.takenAt }?.let { TakenDose(it.takenAt, it.createdBy) }
     }
@@ -172,7 +174,7 @@ class DoseLedger(private val store: Store, private val db: PatouneDb) {
     }
 
     private companion object {
-        /** Marge de recherche autour de la date choisie (les fenêtres durent au plus une journée). */
+        /** Marge de recherche minimale autour de la date choisie. */
         const val SCAN_MS = 2 * 86_400_000L
     }
 }
