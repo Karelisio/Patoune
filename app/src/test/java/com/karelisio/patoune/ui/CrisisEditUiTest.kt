@@ -38,7 +38,12 @@ class CrisisEditUiTest {
     private fun open() {
         rule.setScreen { vm = it; CrisisEditScreen(it, id = null, startRecording = false) }
         // L'animal sélectionné est chargé de façon asynchrone (lent au premier test : base et DataStore à froid).
-        rule.waitUntil(20_000) { vm.selected.value != null }
+        // On laisse tourner les threads Room/DataStore et on vide la file du thread principal à chaque essai.
+        rule.waitUntil(20_000) {
+            Thread.sleep(10)
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            vm.selected.value != null
+        }
         rule.onNodeWithText(str(R.string.crisis_draft_note)).assertIsDisplayed()
     }
 
