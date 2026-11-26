@@ -29,22 +29,24 @@ class ReminderScheduler(private val context: Context) {
     fun canExact(): Boolean = android.os.Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()
 
     suspend fun rescheduleAll() {
-        val meds = context.container.db.medications().active()
+        val db = context.container.db
+        val meds = db.medications().active()
         val now = System.currentTimeMillis()
         meds.forEach { med ->
             schedule(med)
             // Après un redémarrage : ré-armer la vérif retard de l'horaire qui vient de passer.
             if (!med.asNeeded && med.lateMinutes > 0) {
-                ReminderPlanner.next(med, now - med.lateMinutes * 60_000L, Dates.zone())
+                db.scheduleOf(med).next(now - med.lateMinutes * 60_000L)
                     ?.takeIf { it <= now }?.let { scheduleLate(med, it, now) }
             }
         }
     }
 
-    fun schedule(med: Medication, after: Long = System.currentTimeMillis()) {
+    /** Prochain rappel du traitement ; pour une fréquence espacée, compté depuis la dernière prise donnée. */
+    suspend fun schedule(med: Medication, after: Long = System.currentTimeMillis()) {
         cancelReminder(med.id)
         if (med.deleted || med.asNeeded) { cancelLate(med.id); return }
-        val at = ReminderPlanner.next(med, after, Dates.zone()) ?: return
+        val at = context.container.db.scheduleOf(med).next(after) ?: return
         setAlarm(pending(med.id, at), at, med.alarmStyle)
     }
 

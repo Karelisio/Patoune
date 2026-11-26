@@ -47,6 +47,8 @@ interface DoseLogDao : SyncDao<DoseLog> {
     @Query("SELECT * FROM dose_logs WHERE animalId = :animalId AND deleted = 0 AND takenAt BETWEEN :from AND :to ORDER BY takenAt") suspend fun between(animalId: String, from: Long, to: Long): List<DoseLog>
     @Query("SELECT * FROM dose_logs WHERE medicationId = :medId AND deleted = 0 AND takenAt >= :from ORDER BY takenAt DESC") suspend fun since(medId: String, from: Long): List<DoseLog>
     @Query("SELECT * FROM dose_logs WHERE animalId = :animalId AND deleted = 0 AND takenAt >= :from ORDER BY takenAt DESC") fun observeSince(animalId: String, from: Long): Flow<List<DoseLog>>
+    /** Dernière prise donnée (non supprimée) : ancre des fréquences espacées. */
+    @Query("SELECT * FROM dose_logs WHERE medicationId = :medId AND deleted = 0 AND status = 'GIVEN' ORDER BY takenAt DESC LIMIT 1") suspend fun lastGiven(medId: String): DoseLog?
     @Query("SELECT * FROM dose_logs WHERE id = :id") override suspend fun byId(id: String): DoseLog?
     @Query("SELECT * FROM dose_logs") override suspend fun allRows(): List<DoseLog>
     @Upsert override suspend fun put(row: DoseLog)

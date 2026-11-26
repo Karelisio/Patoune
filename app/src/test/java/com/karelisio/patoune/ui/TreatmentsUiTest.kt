@@ -96,7 +96,9 @@ class TreatmentsUiTest {
         val scope = rememberCoroutineScope()
         val ctrl = remember { GiveController(c, scope) }
         com.karelisio.patoune.ui.theme.PatouneTheme {
-            MedCard(MedStatus(med, nextAt = null, given = null), shared = false, onGive = { ctrl.give(med) }, onOpen = {})
+            // Prise prévue dans 1 h : traitement « à donner », donc bouton « Donné » (un traitement sans échéance
+            // proche affiche « Donner maintenant », voir SpacedDosesUiTest).
+            MedCard(MedStatus(med, nextAt = System.currentTimeMillis() + 3_600_000L, given = null), shared = false, onGive = { ctrl.give(med) }, onOpen = {})
             DoubleDoseDialog(ctrl, shared = false)
         }
     }
