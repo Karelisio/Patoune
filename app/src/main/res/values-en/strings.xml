@@ -809,4 +809,6 @@
     <string name="doc_edit_title">Edit document</string>
     <string name="doc_edit_named">Edit %1$s</string>
     <string name="doc_replace_file">Replace file</string>
+    <!-- Crise sans fantôme -->
+    <string name="crisis_draft_note">Not saved yet: film or tap Save</string>
 </resources>

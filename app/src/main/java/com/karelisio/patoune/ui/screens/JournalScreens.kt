@@ -5,6 +5,7 @@ import com.karelisio.patoune.ui.Labels
 import com.karelisio.patoune.R
 import androidx.compose.ui.res.stringResource
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -78,7 +79,9 @@ import com.karelisio.patoune.data.CrisisTypes
 import com.karelisio.patoune.data.ObsCategory
 import com.karelisio.patoune.data.Observation
 import com.karelisio.patoune.data.PushType
+import com.karelisio.patoune.domain.CrisisDraft
 import com.karelisio.patoune.domain.Dates
+import com.karelisio.patoune.media.CrisisDraftOps
 import com.karelisio.patoune.domain.newId
 import com.karelisio.patoune.ui.LocalNav
 import com.karelisio.patoune.ui.MainViewModel
@@ -97,7 +100,9 @@ import com.karelisio.patoune.domain.Backdate
 import com.karelisio.patoune.ui.components.VetNote
 import com.karelisio.patoune.ui.components.cascade
 import com.karelisio.patoune.ui.sharedKey
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 @Composable
@@ -185,40 +190,75 @@ fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
     val animal by vm.selected.collectAsStateWithLifecycle()
     var cr by rememberSaveable(stateSaver = crisisSaver) { mutableStateOf(Crisis(id = id ?: newId(), startAt = System.currentTimeMillis(), types = "Toux")) }
     var launched by rememberSaveable { mutableStateOf(false) }
+    /** Fiche existante chargée une fois : le retour de la caméra ne doit pas écraser les modifications en cours. */
+    var loaded by rememberSaveable { mutableStateOf(false) }
+    /** Crise auto-enregistrée (et annoncée) après une vidéo : « Enregistrer » ne repousse rien, le retour la garde. */
+    var autoSaved by rememberSaveable { mutableStateOf(false) }
+    /** Heure d'ouverture de la caméra vidéo (0 = aucune) : survit à l'aller-retour, la composition étant recréée au retour. */
+    var cameraSince by rememberSaveable { mutableLongStateOf(0L) }
+    val saved = id != null || autoSaved
     val media by remember(cr.id) { c.db.media().observeAttached(cr.id) }.collectAsState(emptyList())
     val rescue by remember(animal?.id) { animal?.let { c.db.medications().observeFor(it.id) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
-    LaunchedEffect(id) { if (id != null) c.db.crises().byId(id)?.let { cr = it } }
-    // « Crise en cours » : enregistrement vidéo immédiat.
-    LaunchedEffect(startRecording) {
+    LaunchedEffect(id) { if (id != null && !loaded) c.db.crises().byId(id)?.let { cr = it; loaded = true } }
+    fun filmNow(autoStart: Boolean) {
+        cameraSince = System.currentTimeMillis()
+        nav.navigate(Routes.Camera(video = true, attachType = AttachType.CRISIS.name, attachId = cr.id, autoStart = autoStart))
+    }
+    // « Crise en cours » : caméra ouverte tout de suite ; l'heure du tap reste dans le brouillon, rien n'est encore enregistré.
+    // Clé animal : l'animal sélectionné peut arriver après le premier affichage (ouverture depuis le widget).
+    LaunchedEffect(startRecording, animal?.id) {
         if (startRecording && !launched && animal != null) {
             launched = true
-            // Horodatage immédiat : la crise existe même si l'on quitte sans compléter la fiche.
-            val a = animal!!
-            cr = c.store.save(cr.copy(animalId = a.id))
-            c.hooks.onPush(PushType.CRISIS, res.getString(R.string.push_crisis_now, a.name), res.getString(R.string.push_crisis_start, Dates.fmtTime(cr.startAt)), cr.id)
-            nav.navigate(Routes.Camera(video = true, attachType = AttachType.CRISIS.name, attachId = cr.id, autoStart = true))
+            cr = cr.copy(animalId = animal!!.id)
+            filmNow(autoStart = true)
+        }
+    }
+    // Retour de la caméra : valeur lue à l'entrée dans la composition (recréée au retour), pas au premier affichage.
+    val backFromCamera = remember { cameraSince }
+    LaunchedEffect(Unit) {
+        if (backFromCamera == 0L) return@LaunchedEffect
+        val a = animal ?: return@LaunchedEffect
+        cameraSince = 0L
+        CrisisDraftOps.afterCamera(c.store, c.db, cr, a.id, saved, backFromCamera)?.let { s ->
+            cr = s
+            autoSaved = true
+            c.hooks.onPush(PushType.CRISIS, res.getString(R.string.push_crisis_now, a.name), res.getString(R.string.push_crisis_start, Dates.fmtTime(s.startAt)), s.id)
+            c.hooks.onDataChanged()
         }
     }
     LaunchedEffect(media.size) {
         if (cr.durationSec == 0) media.firstOrNull { it.durationMs > 0 }?.let { cr = cr.copy(durationSec = (it.durationMs / 1000).toInt()) }
     }
+    // Quitter sans enregistrer : un brouillon jamais enregistré ne laisse ni crise ni médias orphelins.
+    var leaving by remember { mutableStateOf(false) }
+    fun leave() {
+        if (leaving) return
+        leaving = true
+        scope.launch {
+            CrisisDraftOps.leave(c.db, c.media, cr.id, saved)
+            // La navigation exige le thread principal, quel que soit le thread de reprise après la requête Room.
+            withContext(Dispatchers.Main.immediate) { nav.popBackStack() }
+        }
+    }
+    BackHandler { leave() }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         val a = animal ?: return@rememberLauncherForActivityResult
         if (uri != null) scope.launch { c.media.import(uri, a.id, AttachType.CRISIS, cr.id) }
     }
 
     Scaffold(topBar = {
-        BackTopBar(stringResource(if (id == null) R.string.crisis_title else R.string.crisis_edit_title)) {
-            if (id != null) IconButton(onClick = { scope.launch { c.store.delete(cr); nav.popBackStack() } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.action_delete)) }
+        BackTopBar(stringResource(if (id == null) R.string.crisis_title else R.string.crisis_edit_title), onBack = ::leave) {
+            if (saved) IconButton(onClick = { scope.launch { c.store.delete(cr); nav.popBackStack() } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.action_delete)) }
         }
     }) { pad ->
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(16.dp).imePadding().sharedKey("crisis-${cr.id}"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (!saved) Text(stringResource(R.string.crisis_draft_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             // Date et heure modifiables : une crise peut être notée après coup.
             DateTimeField(cr.startAt, { cr = cr.copy(startAt = it) }, stringResource(R.string.crisis_start_field))
             Text(stringResource(R.string.crisis_media), style = MaterialTheme.typography.titleMedium)
             if (media.isNotEmpty()) MediaStrip(media)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip({ nav.navigate(Routes.Camera(true, AttachType.CRISIS.name, cr.id)) }, { Text(stringResource(R.string.crisis_film)) }, leadingIcon = { Icon(Icons.Rounded.Videocam, null) })
+                AssistChip({ filmNow(autoStart = false) }, { Text(stringResource(R.string.crisis_film)) }, leadingIcon = { Icon(Icons.Rounded.Videocam, null) })
                 AssistChip({ nav.navigate(Routes.Camera(false, AttachType.CRISIS.name, cr.id)) }, { Text(stringResource(R.string.media_photo)) }, leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) })
                 AssistChip({ picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }, { Text(stringResource(R.string.journal_tab_gallery)) }, leadingIcon = { Icon(Icons.Rounded.AddPhotoAlternate, null) })
             }
@@ -240,11 +280,11 @@ fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
             Button(enabled = !Backdate.isFuture(cr.startAt, System.currentTimeMillis()), onClick = {
                 val a = animal ?: return@Button
                 scope.launch {
-                    val saved = c.store.save(cr.copy(animalId = cr.animalId.ifEmpty { a.id }))
-                    if (id == null && !startRecording) c.hooks.onPush(PushType.CRISIS, res.getString(R.string.push_crisis_saved, a.name),
-                        res.getString(R.string.push_crisis_saved_body, saved.intensity, Dates.fmtTime(saved.startAt)), saved.id)
+                    val row = c.store.save(cr.copy(animalId = cr.animalId.ifEmpty { a.id }))
+                    if (CrisisDraft.shouldPushOnSave(isNew = id == null, alreadyPushed = autoSaved)) c.hooks.onPush(PushType.CRISIS, res.getString(R.string.push_crisis_saved, a.name),
+                        res.getString(R.string.push_crisis_saved_body, row.intensity, Dates.fmtTime(row.startAt)), row.id)
                     c.hooks.onDataChanged()
-                    nav.popBackStack()
+                    withContext(Dispatchers.Main.immediate) { nav.popBackStack() }
                 }
             }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
         }

@@ -839,4 +839,6 @@
     <string name="doc_edit_title">Modifier le document</string>
     <string name="doc_edit_named">Modifier %1$s</string>
     <string name="doc_replace_file">Remplacer le fichier</string>
+    <!-- Crise sans fantôme -->
+    <string name="crisis_draft_note">Pas encore enregistrée : filmez ou touchez Enregistrer</string>
 </resources>

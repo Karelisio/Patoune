@@ -55,11 +55,12 @@ fun SettingsHeader(text: String) {
 }
 
 @Composable
-fun BackTopBar(title: String, actions: @Composable () -> Unit = {}) {
+fun BackTopBar(title: String, onBack: (() -> Unit)? = null, actions: @Composable () -> Unit = {}) {
     val nav = LocalNav.current
     TopAppBar(
         title = { Text(title) },
-        navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } },
+        // [onBack] : écran qui doit agir avant de se fermer (ex. brouillon de crise abandonné).
+        navigationIcon = { IconButton(onClick = { onBack?.invoke() ?: nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } },
         actions = { actions() },
     )
 }
