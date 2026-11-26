@@ -62,7 +62,7 @@ class SpacedDosesUiTest {
 
     @Test fun homeListsQuarterlyUnderUpcoming() {
         rule.setScreen { HomeScreen(it) }
-        rule.waitUntil(5_000) { rule.onAllNodes(hasText(str(R.string.home_upcoming))).fetchSemanticsNodes().isNotEmpty() }
+        rule.awaitUntil(5_000) { rule.onAllNodes(hasText(str(R.string.home_upcoming))).fetchSemanticsNodes().isNotEmpty() }
         val dueTitle = rule.onNodeWithText(str(R.string.home_due)).fetchSemanticsNode().boundsInRoot.top
         val upcomingTitle = rule.onNodeWithText(str(R.string.home_upcoming)).fetchSemanticsNode().boundsInRoot.top
         val dailyTop = rule.onNodeWithText("Flixotide").fetchSemanticsNode().boundsInRoot.top

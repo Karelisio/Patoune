@@ -31,11 +31,11 @@ class AnimalsUiTest {
             c.store.save(Animal(name = "Rex", species = "Chien", sortOrder = 1))
         }
         rule.setScreen { AnimalsScreen(it) }
-        rule.waitUntil(5_000) { rule.onAllNodes(hasText("Mochi")).fetchSemanticsNodes().isNotEmpty() }
+        rule.awaitUntil(5_000) { rule.onAllNodes(hasText("Mochi")).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithContentDescription(str(R.string.delete_named, "Mochi")).performClick()
         rule.onNodeWithText(str(R.string.delete_named_q, "Mochi")).assertIsDisplayed()
         rule.onNodeWithText(str(R.string.action_delete)).performClick()
-        rule.waitUntil(5_000) { rule.onAllNodes(hasText("Mochi")).fetchSemanticsNodes().isEmpty() }
+        rule.awaitUntil(5_000) { rule.onAllNodes(hasText("Mochi")).fetchSemanticsNodes().isEmpty() }
         rule.onNodeWithText("Rex").assertIsDisplayed()
         assertEquals(listOf("Rex"), runBlocking { c.db.animals().allRows().filter { !it.deleted }.map { it.name } })
     }
