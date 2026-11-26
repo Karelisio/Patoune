@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -85,14 +90,15 @@ import com.karelisio.patoune.ui.components.MultiChips
 import com.karelisio.patoune.ui.components.PawShapes
 import com.karelisio.patoune.ui.components.SectionCard
 import com.karelisio.patoune.ui.components.ShapeBadge
-import com.karelisio.patoune.ui.components.TimeDialog
+import com.karelisio.patoune.ui.components.DateTimeField
+import com.karelisio.patoune.ui.components.ChoiceChips
+import com.karelisio.patoune.data.EntryOps
+import com.karelisio.patoune.domain.Backdate
 import com.karelisio.patoune.ui.components.VetNote
 import com.karelisio.patoune.ui.components.cascade
 import com.karelisio.patoune.ui.sharedKey
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZonedDateTime
 
 @Composable
 fun JournalScreen(vm: MainViewModel) {
@@ -179,7 +185,6 @@ fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
     val animal by vm.selected.collectAsStateWithLifecycle()
     var cr by rememberSaveable(stateSaver = crisisSaver) { mutableStateOf(Crisis(id = id ?: newId(), startAt = System.currentTimeMillis(), types = "Toux")) }
     var launched by rememberSaveable { mutableStateOf(false) }
-    var pickTime by remember { mutableStateOf(false) }
     val media by remember(cr.id) { c.db.media().observeAttached(cr.id) }.collectAsState(emptyList())
     val rescue by remember(animal?.id) { animal?.let { c.db.medications().observeFor(it.id) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
     LaunchedEffect(id) { if (id != null) c.db.crises().byId(id)?.let { cr = it } }
@@ -208,10 +213,8 @@ fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
         }
     }) { pad ->
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(16.dp).imePadding().sharedKey("crisis-${cr.id}"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(Dates.fmtDayTime(cr.startAt), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                TextButton(onClick = { pickTime = true }) { Text(stringResource(R.string.crisis_change_time)) }
-            }
+            // Date et heure modifiables : une crise peut être notée après coup.
+            DateTimeField(cr.startAt, { cr = cr.copy(startAt = it) }, stringResource(R.string.crisis_start_field))
             Text(stringResource(R.string.crisis_media), style = MaterialTheme.typography.titleMedium)
             if (media.isNotEmpty()) MediaStrip(media)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -234,7 +237,7 @@ fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
             MultiChips(CrisisTypes.triggers, cr.triggers, { stableLabel(CrisisTypes.labels, it) }) { cr = cr.copy(triggers = it) }
             Field(cr.notes, { cr = cr.copy(notes = it) }, stringResource(R.string.field_notes), minLines = 3)
             VetNote(stringResource(R.string.crisis_vet_note))
-            Button(onClick = {
+            Button(enabled = !Backdate.isFuture(cr.startAt, System.currentTimeMillis()), onClick = {
                 val a = animal ?: return@Button
                 scope.launch {
                     val saved = c.store.save(cr.copy(animalId = cr.animalId.ifEmpty { a.id }))
@@ -243,13 +246,7 @@ fun CrisisEditScreen(vm: MainViewModel, id: String?, startRecording: Boolean) {
                     c.hooks.onDataChanged()
                     nav.popBackStack()
                 }
-            }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
-        }
-    }
-    if (pickTime) {
-        val z = Instant.ofEpochMilli(cr.startAt).atZone(Dates.zone())
-        TimeDialog(z.toLocalTime(), { pickTime = false }) { t ->
-            cr = cr.copy(startAt = ZonedDateTime.of(z.toLocalDate(), t, Dates.zone()).toInstant().toEpochMilli()); pickTime = false
+            }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
         }
     }
 }
@@ -268,6 +265,8 @@ private fun ObservationsContent(animalId: String, snack: SnackbarHostState) {
     val scope = rememberCoroutineScope()
     val list by remember(animalId) { c.db.observations().observeFor(animalId) }.collectAsState(emptyList())
     var noteFor by remember { mutableStateOf<Observation?>(null) }
+    /** Observation à corriger, ou nouvelle (id vide) ajoutée après coup. */
+    var editing by remember { mutableStateOf<Observation?>(null) }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         items(ObsCategory.entries) { cat ->
             SectionCard {
@@ -287,9 +286,15 @@ private fun ObservationsContent(animalId: String, snack: SnackbarHostState) {
             }
         }
         item { Text(stringResource(R.string.obs_history), style = MaterialTheme.typography.titleMedium) }
+        item {
+            OutlinedButton(onClick = { editing = Observation(animalId = animalId, at = System.currentTimeMillis()) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.obs_add_past))
+            }
+        }
         items(list.take(100), key = { it.id }) { o ->
             val line = stringResource(R.string.obs_line, stringResource(o.category.labelRes), stableLabel(ObsCategory.optionLabels, o.value))
             ListItem(
+                modifier = Modifier.clickable(onClickLabel = stringResource(R.string.obs_edit_title)) { editing = o },
                 headlineContent = { Text(line) },
                 supportingContent = {
                     Text(listOfNotNull(Dates.fmtDayTime(o.at), o.note.takeIf { it.isNotBlank() }, o.createdBy.takeIf { c.sharedFlag && it.isNotBlank() })
@@ -308,6 +313,46 @@ private fun ObservationsContent(animalId: String, snack: SnackbarHostState) {
             confirmButton = { TextButton(onClick = { scope.launch { c.store.save(o.copy(note = text)) }; noteFor = null }) { Text(stringResource(R.string.action_ok)) } },
 
         )
+    }
+    editing?.let { ObservationSheet(it) { editing = null } }
+}
+
+/** Ajout ([base] sans id) ou correction d'une observation : date, catégorie, valeur (clé française stockée), note. */
+@Composable
+private fun ObservationSheet(base: Observation, onDismiss: () -> Unit) {
+    val c = LocalContext.current.container
+    val scope = rememberCoroutineScope()
+    val isNew = base.id.isEmpty()
+    var at by remember { mutableLongStateOf(base.at) }
+    var category by remember { mutableStateOf(base.category) }
+    var value by remember { mutableStateOf(base.value.takeIf { it in base.category.options }) }
+    var note by remember { mutableStateOf(base.note) }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(if (isNew) R.string.obs_add_past else R.string.obs_edit_title), style = MaterialTheme.typography.titleLarge)
+            DateTimeField(at, { at = it }, stringResource(R.string.field_date))
+            Text(stringResource(R.string.obs_category), style = MaterialTheme.typography.titleSmall)
+            ChoiceChips(ObsCategory.entries, category, { stringResource(it.labelRes) }) {
+                // Les options changent avec la catégorie : la valeur est à rechoisir si elle n'existe plus.
+                if (it != category) { category = it; if (value !in it.options) value = null }
+            }
+            Text(stringResource(R.string.obs_value), style = MaterialTheme.typography.titleSmall)
+            ChoiceChips(category.options, value, { stableLabel(ObsCategory.optionLabels, it) }) { value = it }
+            Field(note, { note = it }, stringResource(R.string.obs_note), minLines = 2)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        val v = value ?: return@Button
+                        scope.launch { EntryOps.saveObservation(c.store, base, at, category, v, note); onDismiss() }
+                    },
+                    enabled = value != null && !Backdate.isFuture(at, System.currentTimeMillis()),
+                ) { Text(stringResource(R.string.action_save)) }
+            }
+            Spacer(Modifier.padding(8.dp))
+        }
     }
 }
 

@@ -20,6 +20,10 @@ import com.karelisio.patoune.ui.screens.DoubleDoseDialog
 import com.karelisio.patoune.ui.screens.GiveController
 import com.karelisio.patoune.ui.screens.MedCard
 import com.karelisio.patoune.ui.screens.MedStatus
+import com.karelisio.patoune.ui.screens.MedicationDetailScreen
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import com.karelisio.patoune.ui.screens.TreatmentsScreen
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -70,6 +74,21 @@ class TreatmentsUiTest {
         rule.onNodeWithText(str(R.string.action_no)).performClick()
         rule.onNodeWithText(str(R.string.med_double_title)).assertDoesNotExist()
         assertEquals(1, givenCount())
+    }
+
+    /** Saisie après coup depuis la fiche du traitement : la prise apparaît dans l'historique, modifiable. */
+    @Test fun addPastDoseFromDetailAppearsInHistory() {
+        rule.setScreen { MedicationDetailScreen(it, med.id) }
+        rule.waitUntil(5_000) { rule.onAllNodes(hasText(str(R.string.dose_add_past))).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithText(str(R.string.dose_add_past)).performClick()
+        rule.waitUntil(5_000) { rule.onAllNodes(hasText(str(R.string.action_save))).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithText(str(R.string.action_save)).performClick()
+        rule.waitUntil(5_000) { givenCount() == 1 }
+        // La ligne d'historique annonce « Modifier la prise » à TalkBack.
+        val editRow = SemanticsMatcher("ligne de prise modifiable") { it.config.getOrNull(SemanticsActions.OnClick)?.label == str(R.string.dose_edit_title) }
+        rule.waitUntil(5_000) { rule.onAllNodes(editRow).fetchSemanticsNodes().size == 1 }
+        rule.onNode(editRow).assertIsDisplayed()
+        rule.onNodeWithText(str(R.string.action_save)).assertDoesNotExist()
     }
 
     @Composable

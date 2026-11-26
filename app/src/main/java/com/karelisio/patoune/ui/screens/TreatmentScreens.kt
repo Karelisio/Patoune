@@ -13,6 +13,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.semantics.Role
+import com.karelisio.patoune.domain.Backdate
+import com.karelisio.patoune.ui.components.DateTimeField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -296,6 +307,7 @@ fun MedicationDetailScreen(vm: MainViewModel, id: String) {
     var status by remember { mutableStateOf<MedStatus?>(null) }
     var refill by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var doseSheet by remember { mutableStateOf<DoseSheetTarget?>(null) }
     val ctrl = remember { GiveController(c, scope) }
     LaunchedEffect(med, logs) { med?.let { status = medStatus(c, it) } }
     val m = med ?: return
@@ -329,10 +341,16 @@ fun MedicationDetailScreen(vm: MainViewModel, id: String) {
                 items(changes, key = { it.id }) { ch -> ChangeRow(ch, shared) }
             }
             item { Text(stringResource(R.string.med_history_doses), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
-            items(logs, key = { it.id }) { log -> DoseRow(log, shared) { scope.launch { c.doses.undo(log) } } }
+            item {
+                OutlinedButton(onClick = { doseSheet = DoseSheetTarget(null) }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.dose_add_past))
+                }
+            }
+            items(logs, key = { it.id }) { log -> DoseRow(log, shared, onEdit = { doseSheet = DoseSheetTarget(log) }) { scope.launch { c.doses.undo(log) } } }
         }
     }
     DoubleDoseDialog(ctrl, shared)
+    doseSheet?.let { t -> DoseSheet(m, t.log, shared) { doseSheet = null } }
     if (refill) {
         var amount by remember { mutableStateOf<Double?>(null) }
         AlertDialog(
@@ -373,8 +391,9 @@ private fun ChangeRow(change: MedicationChange, shared: Boolean) {
 }
 
 @Composable
-private fun DoseRow(log: DoseLog, shared: Boolean, onUndo: () -> Unit) {
+private fun DoseRow(log: DoseLog, shared: Boolean, onEdit: () -> Unit, onUndo: () -> Unit) {
     ListItem(
+        modifier = Modifier.clickable(onClickLabel = stringResource(R.string.dose_edit_title), onClick = onEdit),
         headlineContent = { Text(stringResource(if (log.status == DoseStatus.GIVEN) R.string.dose_given else R.string.dose_skipped)) },
         supportingContent = {
             Text(if (shared && log.createdBy.isNotBlank()) stringResource(R.string.pair_dot, Dates.fmtDayTime(log.takenAt), log.createdBy) else Dates.fmtDayTime(log.takenAt))
@@ -382,4 +401,78 @@ private fun DoseRow(log: DoseLog, shared: Boolean, onUndo: () -> Unit) {
         trailingContent = { IconButton(onClick = onUndo) { Icon(Icons.Rounded.Undo, stringResource(R.string.dose_undo)) } },
 
     )
+}
+
+/** Prise à corriger, ou null pour une prise ajoutée après coup. */
+private data class DoseSheetTarget(val log: DoseLog?)
+
+/**
+ * Ajout d'une prise passée ([log] null : maintenant, « Donné ») ou correction d'une prise existante.
+ * L'auteur affiché reste celui de la saisie d'origine. Le garde-fou double dose porte sur la fenêtre de la date choisie.
+ */
+@Composable
+fun DoseSheet(med: Medication, log: DoseLog?, shared: Boolean, onDismiss: () -> Unit) {
+    val c = LocalContext.current.container
+    val scope = rememberCoroutineScope()
+    var at by remember { mutableLongStateOf(log?.takenAt ?: System.currentTimeMillis()) }
+    var status by remember { mutableStateOf(log?.status ?: DoseStatus.GIVEN) }
+    var adjust by remember { mutableStateOf(true) }
+    var conflict by remember { mutableStateOf<DoseResult.AlreadyGiven?>(null) }
+    // Stock : déduit à l'ajout d'une prise donnée ; à la correction, seulement si le statut change.
+    val stockChoice = med.stockRemaining != null && if (log == null) status == DoseStatus.GIVEN else status != log.status
+    fun save(force: Boolean) = scope.launch {
+        val r = if (log == null) c.doses.record(med, at, status, adjustStock = stockChoice && adjust, force = force)
+        else c.doses.edit(log, at, status, adjustStock = stockChoice && adjust, force = force)
+        when (r) {
+            is DoseResult.AlreadyGiven -> conflict = r
+            is DoseResult.Saved -> onDismiss()
+        }
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(if (log == null) R.string.dose_add_past else R.string.dose_edit_title), style = MaterialTheme.typography.titleLarge)
+            Text(med.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            DateTimeField(at, { at = it }, stringResource(R.string.field_date))
+            val statuses = listOf(DoseStatus.GIVEN, DoseStatus.SKIPPED)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                statuses.forEachIndexed { i, s ->
+                    SegmentedButton(status == s, { status = s }, SegmentedButtonDefaults.itemShape(i, statuses.size)) {
+                        Text(stringResource(if (s == DoseStatus.GIVEN) R.string.dose_given else R.string.dose_skipped))
+                    }
+                }
+            }
+            if (stockChoice) Row(
+                Modifier.fillMaxWidth().toggleable(adjust, role = Role.Checkbox, onValueChange = { adjust = it }),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(adjust, onCheckedChange = null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(if (status == DoseStatus.GIVEN) R.string.dose_stock_deduct else R.string.dose_stock_restore))
+            }
+            if (log != null && shared && log.createdBy.isNotBlank()) {
+                Text(stringResource(R.string.dose_noted_by, log.createdBy), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { save(force = false) }, enabled = !Backdate.isFuture(at, System.currentTimeMillis())) { Text(stringResource(R.string.action_save)) }
+            }
+            Spacer(Modifier.padding(8.dp))
+        }
+    }
+    conflict?.let { r ->
+        AlertDialog(
+            onDismissRequest = { conflict = null },
+            title = { Text(stringResource(R.string.med_double_title)) },
+            text = {
+                Text(
+                    if (shared && r.by.isNotBlank()) stringResource(R.string.med_double_body_by, med.name, Dates.fmtTime(r.at), r.by, Dates.fmtDayTime(r.at))
+                    else stringResource(R.string.med_double_body, med.name, Dates.fmtTime(r.at), Dates.fmtDayTime(r.at)),
+                )
+            },
+            confirmButton = { TextButton(onClick = { conflict = null; save(force = true) }) { Text(stringResource(R.string.med_double_confirm)) } },
+            dismissButton = { TextButton(onClick = { conflict = null }) { Text(stringResource(R.string.action_no)) } },
+        )
+    }
 }

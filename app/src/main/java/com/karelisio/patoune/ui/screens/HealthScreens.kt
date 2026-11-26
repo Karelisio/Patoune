@@ -6,6 +6,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.rounded.Edit
+import com.karelisio.patoune.data.MediaItem
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -105,6 +108,8 @@ fun HealthScreen(vm: MainViewModel) {
     var adding by remember { mutableStateOf<Int?>(null) }
     var editCare by remember { mutableStateOf<CareItem?>(null) }
     var editVisit by remember { mutableStateOf<VetVisit?>(null) }
+    var editWeight by remember { mutableStateOf<WeightEntry?>(null) }
+    var editDoc by remember { mutableStateOf<HealthDocument?>(null) }
     val nav = LocalNav.current
     Scaffold(
         topBar = { AnimalTopBar(vm) { IconButton(onClick = { nav.navigate(Routes.Emergency) }) { Icon(Icons.Rounded.LocalHospital, stringResource(R.string.emergency_title)) } } },
@@ -122,8 +127,8 @@ fun HealthScreen(vm: MainViewModel) {
                 when (page) {
                     0 -> CareList(a.id) { editCare = it }
                     1 -> VisitList(a.id) { editVisit = it }
-                    2 -> WeightContent(a.id)
-                    else -> DocumentList(a.id)
+                    2 -> WeightContent(a.id) { editWeight = it }
+                    else -> DocumentList(a.id) { editDoc = it }
                 }
             }
         }
@@ -132,11 +137,13 @@ fun HealthScreen(vm: MainViewModel) {
     when (adding) {
         0 -> { editCare = CareItem(animalId = a.id, date = Dates.today().toString()); adding = null }
         1 -> { editVisit = VetVisit(id = newId(), animalId = a.id, date = Dates.today().toString()); adding = null }
-        2 -> WeightSheet(a.id) { adding = null }
-        3 -> DocumentSheet(a.id) { adding = null }
+        2 -> { editWeight = WeightEntry(animalId = a.id, date = Dates.today().toString()); adding = null }
+        3 -> { editDoc = HealthDocument(id = newId(), animalId = a.id, date = Dates.today().toString()); adding = null }
     }
     editCare?.let { CareSheet(it) { editCare = null } }
     editVisit?.let { VisitSheet(it) { editVisit = null } }
+    editWeight?.let { WeightSheet(it) { editWeight = null } }
+    editDoc?.let { DocumentSheet(it) { editDoc = null } }
 }
 
 @Composable
@@ -240,7 +247,7 @@ private fun VisitSheet(initial: VetVisit, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun WeightContent(animalId: String) {
+private fun WeightContent(animalId: String, onEdit: (WeightEntry) -> Unit) {
     val c = LocalContext.current.container
     val scope = rememberCoroutineScope()
     val weights by remember(animalId) { c.db.weights().observeFor(animalId) }.collectAsState(emptyList())
@@ -253,23 +260,27 @@ private fun WeightContent(animalId: String) {
             }
         }
         items(weights.reversed(), key = { it.id }) { w ->
-            ListItem(headlineContent = { Text(stringResource(R.string.weight_kg, fmtQty(w.kg))) }, supportingContent = { Text(Dates.fmtDay(w.date)) },
+            ListItem(modifier = Modifier.clickable(onClickLabel = stringResource(R.string.weight_edit_title)) { onEdit(w) },
+                headlineContent = { Text(stringResource(R.string.weight_kg, fmtQty(w.kg))) }, supportingContent = { Text(Dates.fmtDay(w.date)) },
                 trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(w) } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.health_weight_delete, fmtQty(w.kg), Dates.fmtDay(w.date))) } })
         }
     }
 }
 
+/** Nouvelle pesée ([initial] sans id) ou correction de la valeur et de la date d'une pesée existante. */
 @Composable
-private fun WeightSheet(animalId: String, onDismiss: () -> Unit) {
+private fun WeightSheet(initial: WeightEntry, onDismiss: () -> Unit) {
     val c = LocalContext.current.container
     val scope = rememberCoroutineScope()
-    var kg by remember { mutableStateOf<Double?>(null) }
-    var date by remember { mutableStateOf(Dates.today().toString()) }
+    val isNew = initial.id.isEmpty()
+    var kg by remember { mutableStateOf(if (isNew) null else initial.kg) }
+    var date by remember { mutableStateOf(initial.date.ifBlank { Dates.today().toString() }) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            NumberField(null, { kg = it }, stringResource(R.string.health_weight_field))
+            if (!isNew) Text(stringResource(R.string.weight_edit_title), style = MaterialTheme.typography.titleLarge)
+            NumberField(kg, { kg = it }, stringResource(R.string.health_weight_field))
             DateField(date, { date = it ?: Dates.today().toString() }, stringResource(R.string.field_date), clearable = false)
-            Button(onClick = { scope.launch { kg?.let { c.store.save(WeightEntry(animalId = animalId, date = date, kg = it)) }; onDismiss() } },
+            Button(onClick = { scope.launch { kg?.let { c.store.save(initial.copy(date = date, kg = it)) }; onDismiss() } },
                 enabled = kg != null, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
             Spacer(Modifier.padding(8.dp))
         }
@@ -277,7 +288,7 @@ private fun WeightSheet(animalId: String, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun DocumentList(animalId: String) {
+private fun DocumentList(animalId: String, onEdit: (HealthDocument) -> Unit) {
     val c = LocalContext.current.container
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
@@ -286,46 +297,79 @@ private fun DocumentList(animalId: String) {
         if (docs.isEmpty()) item { EmptyState(Icons.Rounded.Description, stringResource(R.string.health_doc_empty), stringResource(R.string.health_doc_empty_body)) }
         items(docs, key = { it.id }) { d ->
             val attached by remember(d.id) { c.db.media().observeAttached(d.id) }.collectAsState(emptyList())
-            val m = attached.firstOrNull { it.id == d.mediaId } ?: attached.firstOrNull()
+            // Sans fichier désigné (photo prise depuis la fiche) : la pièce jointe la plus récente.
+            val m = attached.firstOrNull { it.id == d.mediaId } ?: attached.lastOrNull()
             ListItem(
-                modifier = Modifier.cascade(docs.indexOf(d)).clickable { m?.let { nav.navigate(Routes.MediaViewer(it.id)) } },
+                modifier = Modifier.cascade(docs.indexOf(d)).combinedClickable(
+                    onLongClickLabel = stringResource(R.string.doc_edit_title), onLongClick = { onEdit(d) },
+                    onClick = { m?.let { nav.navigate(Routes.MediaViewer(it.id)) } ?: onEdit(d) },
+                ),
                 leadingContent = {
                     m?.let { MediaThumb(it, size = 56.dp) } ?: ShapeBadge(Icons.Rounded.Description, PawShapes.gem, MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
                 },
                 headlineContent = { Text(d.title.ifBlank { stringResource(d.kind.labelRes) }) },
                 supportingContent = { Text(stringResource(R.string.pair_dot, stringResource(d.kind.labelRes), Dates.fmtDay(d.date))) },
-                trailingContent = { IconButton(onClick = { scope.launch { c.store.delete(d) } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete_named, d.title.ifBlank { stringResource(d.kind.labelRes) })) } },
+                trailingContent = {
+                    val name = d.title.ifBlank { stringResource(d.kind.labelRes) }
+                    Row {
+                        IconButton(onClick = { onEdit(d) }) { Icon(Icons.Rounded.Edit, stringResource(R.string.doc_edit_named, name)) }
+                        IconButton(onClick = { scope.launch { c.store.delete(d) } }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete_named, name)) }
+                    }
+                },
             )
         }
     }
 }
 
+/**
+ * Nouveau document ou correction (titre, type, date) d'un document existant : le fichier joint reste,
+ * sauf s'il est remplacé (l'ancien est alors supprimé à l'enregistrement ; un fichier choisi puis abandonné aussi).
+ */
 @Composable
-private fun DocumentSheet(animalId: String, onDismiss: () -> Unit) {
+private fun DocumentSheet(initial: HealthDocument, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val res = LocalResources.current
     val c = ctx.container
     val nav = LocalNav.current
     val scope = rememberCoroutineScope()
-    var d by remember { mutableStateOf(HealthDocument(id = newId(), animalId = animalId, date = Dates.today().toString())) }
-    var fileName by remember { mutableStateOf<String?>(null) }
+    val existing = initial.updatedAt > 0
+    var d by remember { mutableStateOf(initial) }
+    var imported by remember { mutableStateOf<MediaItem?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
-            c.media.import(uri, animalId, AttachType.DOCUMENT, d.id)?.let { d = d.copy(mediaId = it.id); fileName = it.mime }
+            c.media.import(uri, d.animalId, AttachType.DOCUMENT, d.id)?.let { item ->
+                imported?.let { c.media.delete(it) }
+                imported = item
+                d = d.copy(mediaId = item.id)
+            }
         }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    val cancel: () -> Unit = { scope.launch { imported?.let { c.media.delete(it) }; onDismiss() } }
+    ModalBottomSheet(onDismissRequest = cancel) {
         Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (existing) Text(stringResource(R.string.doc_edit_title), style = MaterialTheme.typography.titleLarge)
             ChoiceChips(DocKind.entries, d.kind, { stringResource(it.labelRes) }) { d = d.copy(kind = it) }
             Field(d.title, { d = d.copy(title = it) }, stringResource(R.string.health_doc_title))
             DateField(d.date, { d = d.copy(date = it ?: Dates.today().toString()) }, stringResource(R.string.field_date), clearable = false)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                AssistChip({ picker.launch(arrayOf("application/pdf", "image/*")) }, { Text(stringResource(R.string.health_doc_pick)) }, leadingIcon = { Icon(Icons.Rounded.AttachFile, null) })
-                AssistChip({ scope.launch { c.store.save(d) }; onDismiss(); nav.navigate(Routes.Camera(false, AttachType.DOCUMENT.name, d.id)) }, { Text(stringResource(R.string.health_doc_shoot)) },
-                    leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) })
+                AssistChip({ picker.launch(arrayOf("application/pdf", "image/*")) }, { Text(stringResource(if (existing && d.mediaId != null) R.string.doc_replace_file else R.string.health_doc_pick)) },
+                    leadingIcon = { Icon(Icons.Rounded.AttachFile, null) })
+                AssistChip({
+                    // Photo prise depuis la fiche : sans fichier désigné, la plus récente est affichée ; l'ancienne pièce reste jointe.
+                    c.scope.launch { c.store.save(d.copy(mediaId = null)) }
+                    onDismiss(); nav.navigate(Routes.Camera(false, AttachType.DOCUMENT.name, d.id))
+                }, { Text(stringResource(R.string.health_doc_shoot)) }, leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) })
             }
-            fileName?.let { Text(stringResource(R.string.health_doc_attached), color = MaterialTheme.colorScheme.primary) }
-            Button(onClick = { scope.launch { c.store.save(d.copy(title = d.title.ifBlank { res.getString(d.kind.labelRes) })); onDismiss() } }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
+            if (d.mediaId != null) Text(stringResource(R.string.health_doc_attached), color = MaterialTheme.colorScheme.primary)
+            Button(onClick = {
+                scope.launch {
+                    // Fichier remplacé : l'ancien est supprimé (suppression synchronisée et fichier local).
+                    val old = initial.mediaId
+                    if (imported != null && old != null && old != d.mediaId) c.db.media().byId(old)?.let { c.media.delete(it) }
+                    c.store.save(d.copy(title = d.title.ifBlank { res.getString(d.kind.labelRes) }))
+                    onDismiss()
+                }
+            }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
 
             Spacer(Modifier.padding(8.dp))
         }
