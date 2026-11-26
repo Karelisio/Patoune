@@ -399,7 +399,6 @@
     <string name="push_crisis_saved_body">Intensité %1$d/5 à %2$s</string>
     <string name="crisis_title">Crise</string>
     <string name="crisis_edit_title">Modifier la crise</string>
-    <string name="crisis_change_time">Changer l\'heure</string>
     <string name="crisis_media">Vidéos et photos</string>
     <string name="crisis_film">Filmer</string>
     <string name="crisis_duration_field">Durée (secondes)</string>
@@ -816,4 +815,28 @@
     <string name="care_repeat_hint">Le prochain rappel est calculé depuis la date du soin.</string>
     <string name="care_done_today">Fait aujourd\'hui</string>
     <string name="care_done_today_a11y">Marquer %1$s comme fait aujourd\'hui</string>
+    <!-- Historique modifiable -->
+    <string name="field_time">Heure</string>
+    <string name="action_pick_time">Choisir une heure</string>
+    <string name="history_future_error">Cette date est dans le futur</string>
+    <string name="crisis_start_field">Début</string>
+    <string name="dose_add_past">Ajouter une prise passée</string>
+    <string name="dose_edit_title">Modifier la prise</string>
+    <string name="dose_stock_deduct">Déduire du stock</string>
+    <string name="dose_stock_restore">Remettre dans le stock</string>
+    <string name="dose_noted_by">Notée par %1$s</string>
+    <string name="breath_add_past">Ajouter une mesure passée</string>
+    <string name="breath_edit_title">Modifier la mesure</string>
+    <string name="breath_mode_rate">resp/min</string>
+    <string name="breath_mode_taps">Comptage</string>
+    <string name="breath_rate_field">Fréquence (resp/min)</string>
+    <string name="breath_taps_field">Respirations comptées</string>
+    <string name="obs_add_past">Ajouter une observation passée</string>
+    <string name="obs_edit_title">Modifier l\'observation</string>
+    <string name="obs_category">Catégorie</string>
+    <string name="obs_value">Valeur</string>
+    <string name="weight_edit_title">Modifier la pesée</string>
+    <string name="doc_edit_title">Modifier le document</string>
+    <string name="doc_edit_named">Modifier %1$s</string>
+    <string name="doc_replace_file">Remplacer le fichier</string>
 </resources>

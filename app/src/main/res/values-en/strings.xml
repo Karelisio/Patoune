@@ -387,7 +387,6 @@
     <string name="push_crisis_saved_body">Intensity %1$d/5 at %2$s</string>
     <string name="crisis_title">Attack</string>
     <string name="crisis_edit_title">Edit attack</string>
-    <string name="crisis_change_time">Change time</string>
     <string name="crisis_media">Videos and photos</string>
     <string name="crisis_film">Record</string>
     <string name="crisis_duration_field">Duration (seconds)</string>
@@ -786,4 +785,28 @@
     <string name="care_repeat_hint">The next reminder is calculated from the date of care.</string>
     <string name="care_done_today">Done today</string>
     <string name="care_done_today_a11y">Mark %1$s as done today</string>
+    <!-- Historique modifiable -->
+    <string name="field_time">Time</string>
+    <string name="action_pick_time">Pick a time</string>
+    <string name="history_future_error">This date is in the future</string>
+    <string name="crisis_start_field">Start</string>
+    <string name="dose_add_past">Add a past dose</string>
+    <string name="dose_edit_title">Edit dose</string>
+    <string name="dose_stock_deduct">Deduct from stock</string>
+    <string name="dose_stock_restore">Put back in stock</string>
+    <string name="dose_noted_by">Logged by %1$s</string>
+    <string name="breath_add_past">Add a past measurement</string>
+    <string name="breath_edit_title">Edit measurement</string>
+    <string name="breath_mode_rate">breaths/min</string>
+    <string name="breath_mode_taps">Count</string>
+    <string name="breath_rate_field">Rate (breaths/min)</string>
+    <string name="breath_taps_field">Breaths counted</string>
+    <string name="obs_add_past">Add a past observation</string>
+    <string name="obs_edit_title">Edit observation</string>
+    <string name="obs_category">Category</string>
+    <string name="obs_value">Value</string>
+    <string name="weight_edit_title">Edit weight</string>
+    <string name="doc_edit_title">Edit document</string>
+    <string name="doc_edit_named">Edit %1$s</string>
+    <string name="doc_replace_file">Replace file</string>
 </resources>

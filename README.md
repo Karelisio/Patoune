@@ -60,6 +60,10 @@ le partage avec d'autres personnes (conjoint, famille, pet-sitter) est une optio
 - **Comptage auto** : différence de luminance (grille 24×24 sur la zone) par rapport à la première image, à 10 i/s,
   puis détection de pics ; toujours présenté comme une estimation à valider.
 - **Import de sauvegarde** : fusion (rien n'est effacé), même règle que la sync.
+- **Historique modifiable** : prises, mesures, crises, observations, pesées et documents se corrigent ou s'ajoutent après coup
+  (l'auteur affiché reste celui de la saisie d'origine ; garde-fou double dose sur la fenêtre de la date choisie ; une prise
+  ou une mesure datée de plus d'1 h ne déclenche ni push « Prise donnée », ni annulation de rappel, ni alerte de seuil). L'historique des changements d'un
+  traitement reste en lecture seule : c'est la trace de ce qui a été modifié, par qui et quand, et elle ne doit pas pouvoir être réécrite.
 - **Traduction** : les valeurs stockées et synchronisées (options d'observation, types et déclencheurs de crise, espèce, sexe)
   restent des clés françaises ; seul l'affichage est traduit (repli sur la valeur brute si inconnue). Les textes rédigés
   au moment de l'action (historique d'un traitement, pushs du foyer) sont dans la langue de la personne qui agit.
