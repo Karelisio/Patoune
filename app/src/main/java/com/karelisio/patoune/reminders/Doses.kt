@@ -111,7 +111,7 @@ class DoseLedger(private val store: Store, private val db: PatouneDb) {
 
     /** Fenêtre du garde-fou contenant l'instant [at] : seul appel à DoseGuard, à adapter si sa signature change. */
     private fun window(med: Medication, at: Long): LongRange =
-        DoseGuard.currentWindow(ReminderPlanner.parseTimes(med.times), at, Dates.zone(), med.asNeeded)
+        DoseGuard.currentWindow(Schedule.of(med, Dates.zone()), at, med.asNeeded)
 
     /**
      * Prise déjà donnée dans la même fenêtre que [at] : avant [at] (dans sa fenêtre) ou après [at]
