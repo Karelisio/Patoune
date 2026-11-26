@@ -1,10 +1,9 @@
 package com.karelisio.patoune.domain
 
-import java.time.Instant
+import com.karelisio.patoune.data.Medication
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.ZonedDateTime
 
 object ReminderPlanner {
     fun parseTimes(csv: String): List<LocalTime> = csv.split(",").mapNotNull {
@@ -12,23 +11,15 @@ object ReminderPlanner {
     }.distinct().sorted()
 
     /**
-     * Prochain rappel strictement après [after] dans le fuseau [zone], entre [start] et [end] inclus.
-     * L'heure murale est conservée lors des changements d'heure (ZonedDateTime gère le trou et le chevauchement).
+     * Prochain rappel quotidien strictement après [after] dans le fuseau [zone], entre [start] et [end] inclus.
+     * L'heure murale est conservée lors des changements d'heure (voir [Schedule]).
      */
-    fun next(times: List<LocalTime>, after: Long, zone: ZoneId, start: LocalDate?, end: LocalDate?): Long? {
-        if (times.isEmpty()) return null
-        val from = Instant.ofEpochMilli(after).atZone(zone).toLocalDate()
-        var day = if (start != null && start.isAfter(from)) start else from
-        repeat(400) {
-            if (end != null && day.isAfter(end)) return null
-            for (t in times.sorted()) {
-                val at = ZonedDateTime.of(day, t, zone).toInstant().toEpochMilli()
-                if (at > after) return at
-            }
-            day = day.plusDays(1)
-        }
-        return null
-    }
+    fun next(times: List<LocalTime>, after: Long, zone: ZoneId, start: LocalDate?, end: LocalDate?): Long? =
+        Schedule.daily(times, zone, start, end).next(after)
+
+    /** Prochain rappel d'un traitement selon sa fréquence (tous les N jours, certains jours, mensuel…). */
+    fun next(med: Medication, after: Long, zone: ZoneId, today: LocalDate = LocalDate.now(zone)): Long? =
+        Schedule.of(med, zone, today).next(after)
 
     fun snooze(now: Long, minutes: Int = 15): Long = now + minutes * 60_000L
 }

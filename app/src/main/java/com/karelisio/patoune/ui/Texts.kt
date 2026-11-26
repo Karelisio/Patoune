@@ -5,11 +5,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.karelisio.patoune.R
 import com.karelisio.patoune.data.CrisisTypes
+import com.karelisio.patoune.data.FreqType
+import com.karelisio.patoune.data.Medication
 import com.karelisio.patoune.data.MedType
 import com.karelisio.patoune.data.ObsCategory
 import com.karelisio.patoune.domain.Dates
 import com.karelisio.patoune.domain.Insights
+import com.karelisio.patoune.domain.Frequency
 import com.karelisio.patoune.domain.MedDiff
+import com.karelisio.patoune.domain.ReminderPlanner
+import java.time.DayOfWeek
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -109,7 +114,11 @@ object MedDiffText {
             is MedDiff.Change.Created -> {
                 val parts = listOfNotNull(
                     ch.dose.takeIf { it.isNotEmpty() },
-                    if (ch.asNeeded) ctx.getString(R.string.med_change_as_needed) else times(ch.times),
+                    when {
+                        ch.asNeeded -> ctx.getString(R.string.med_change_as_needed)
+                        ch.freq != null -> FreqText.withTimes(ctx, ch.freq, ch.times)
+                        else -> times(ch.times)
+                    },
                     ch.start?.let { ctx.getString(R.string.med_change_from, date(it)) },
                     ch.end?.let { ctx.getString(R.string.med_change_until, date(it)) },
                 )
@@ -123,6 +132,7 @@ object MedDiffText {
                 fmtQty(ch.from), fmtQty(ch.to),
             )
             is MedDiff.Change.Times -> line(R.string.med_change_times, times(ch.from), times(ch.to))
+            is MedDiff.Change.Recurrence -> line(R.string.freq_title, FreqText.frequency(ctx, ch.from), FreqText.frequency(ctx, ch.to))
             MedDiff.Change.ToAsNeeded -> ctx.getString(R.string.med_change_to_as_needed)
             is MedDiff.Change.ToFixed -> ctx.getString(R.string.med_change_to_fixed, times(ch.times))
             is MedDiff.Change.Start -> line(R.string.med_change_start, date(ch.from), date(ch.to))
@@ -130,4 +140,81 @@ object MedDiffText {
             is MedDiff.Change.Alarm -> ctx.getString(if (ch.on) R.string.med_change_alarm_on else R.string.med_change_alarm_off)
         }
     }
+}
+
+/**
+ * Résumés lisibles de la fréquence d'un traitement : « Tous les jours à 08:00, 20:00 »,
+ * « Lun, mer, ven à 08:00 », « Tous les 3 mois, le 12, à 09:00 »… (fiche, urgence, PDF, historique).
+ */
+object FreqText {
+    private val shortRes = mapOf(
+        DayOfWeek.MONDAY to R.string.day_short_mon, DayOfWeek.TUESDAY to R.string.day_short_tue,
+        DayOfWeek.WEDNESDAY to R.string.day_short_wed, DayOfWeek.THURSDAY to R.string.day_short_thu,
+        DayOfWeek.FRIDAY to R.string.day_short_fri, DayOfWeek.SATURDAY to R.string.day_short_sat,
+        DayOfWeek.SUNDAY to R.string.day_short_sun,
+    )
+    private val fullRes = mapOf(
+        DayOfWeek.MONDAY to R.string.day_full_mon, DayOfWeek.TUESDAY to R.string.day_full_tue,
+        DayOfWeek.WEDNESDAY to R.string.day_full_wed, DayOfWeek.THURSDAY to R.string.day_full_thu,
+        DayOfWeek.FRIDAY to R.string.day_full_fri, DayOfWeek.SATURDAY to R.string.day_full_sat,
+        DayOfWeek.SUNDAY to R.string.day_full_sun,
+    )
+
+    fun dayShort(ctx: Context, d: DayOfWeek): String = ctx.getString(shortRes.getValue(d))
+    fun dayFull(ctx: Context, d: DayOfWeek): String = ctx.getString(fullRes.getValue(d))
+
+    /** Libellé des puces de type de fréquence. */
+    fun typeLabel(ctx: Context, t: FreqType): String = ctx.getString(
+        when (t) {
+            FreqType.DAILY -> R.string.freq_type_daily
+            FreqType.EVERY_N_DAYS -> R.string.freq_type_every_n_days
+            FreqType.WEEKDAYS -> R.string.freq_type_weekdays
+            FreqType.EVERY_N_WEEKS -> R.string.freq_type_every_n_weeks
+            FreqType.EVERY_N_MONTHS -> R.string.freq_type_every_n_months
+        },
+    )
+
+    private fun days(ctx: Context, set: Set<DayOfWeek>) = set.sorted().joinToString(", ") { dayShort(ctx, it) }
+
+    /** Fréquence sans horaires ; le booléen indique si un complément (« , le 12 ») a été ajouté. */
+    private fun parts(ctx: Context, f: Frequency): Pair<String, Boolean> {
+        val res = ctx.resources
+        val n = f.interval
+        fun detail(base: String, extra: String) = ctx.getString(R.string.freq_with_detail, base, extra) to true
+        return when (f.type) {
+            FreqType.DAILY -> ctx.getString(R.string.freq_daily) to false
+            FreqType.EVERY_N_DAYS ->
+                (if (n <= 1) ctx.getString(R.string.freq_daily) else res.getQuantityString(R.plurals.freq_every_n_days, n, n)) to false
+            FreqType.WEEKDAYS ->
+                if (f.weekdays.isEmpty()) ctx.getString(R.string.freq_daily) to false
+                else days(ctx, f.weekdays).replaceFirstChar { it.titlecase(Locale.getDefault()) } to false
+            FreqType.EVERY_N_WEEKS -> {
+                val base = if (n <= 1) ctx.getString(R.string.freq_weekly) else res.getQuantityString(R.plurals.freq_every_n_weeks, n, n)
+                when {
+                    f.weekdays.isNotEmpty() -> detail(base, days(ctx, f.weekdays))
+                    f.anchor != null -> detail(base, ctx.getString(R.string.freq_on_weekday, dayFull(ctx, f.anchor.dayOfWeek)))
+                    else -> base to false
+                }
+            }
+            FreqType.EVERY_N_MONTHS -> {
+                val base = if (n <= 1) ctx.getString(R.string.freq_monthly) else res.getQuantityString(R.plurals.freq_every_n_months, n, n)
+                f.anchor?.let { detail(base, ctx.getString(R.string.freq_on_month_day, it.dayOfMonth)) } ?: (base to false)
+            }
+        }
+    }
+
+    /** « Tous les 3 mois, le 12 », « Lun, mer, ven »… */
+    fun frequency(ctx: Context, f: Frequency): String = parts(ctx, f).first
+
+    /** Fréquence suivie des horaires : « Tous les 3 mois, le 12, à 09:00 ». */
+    fun withTimes(ctx: Context, f: Frequency, times: List<java.time.LocalTime>): String {
+        val (text, detailed) = parts(ctx, f)
+        if (times.isEmpty()) return text
+        val t = times.joinToString(", ") { it.format(Dates.time) }
+        return ctx.getString(if (detailed) R.string.freq_at_after_detail else R.string.freq_at, text, t)
+    }
+
+    /** Résumé du calendrier d'un traitement à horaires fixes. */
+    fun summary(ctx: Context, med: Medication): String =
+        withTimes(ctx, Frequency.of(med), ReminderPlanner.parseTimes(med.times))
 }

@@ -2,6 +2,7 @@ package com.karelisio.patoune.ui.screens
 
 import com.karelisio.patoune.ui.fmtQty
 import com.karelisio.patoune.ui.Labels
+import com.karelisio.patoune.ui.FreqText
 import com.karelisio.patoune.R
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -107,7 +108,7 @@ fun EmergencyScreen(vm: MainViewModel) {
                         val dose = m.dose.ifBlank { stringResource(m.type.labelRes) }
                         Text(
                             if (m.asNeeded) stringResource(R.string.emergency_med_as_needed, m.name, dose)
-                            else stringResource(R.string.emergency_med_times, m.name, dose, m.times.replace(",", ", ")),
+                            else stringResource(R.string.emergency_med_times, m.name, dose, FreqText.summary(ctx, m)),
                             style = MaterialTheme.typography.bodyLarge,
                         )
                     }

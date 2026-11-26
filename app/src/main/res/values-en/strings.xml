@@ -316,7 +316,7 @@
     <string name="emergency_current_treatment">Current treatment</string>
     <string name="emergency_none">None</string>
     <string name="emergency_med_as_needed">• %1$s — %2$s (as needed)</string>
-    <string name="emergency_med_times">• %1$s — %2$s at %3$s</string>
+    <string name="emergency_med_times">• %1$s — %2$s · %3$s</string>
     <string name="emergency_key_info">Key information</string>
     <string name="emergency_allergies">Allergies: %1$s</string>
     <string name="emergency_no_allergy">none known</string>
@@ -387,7 +387,6 @@
     <string name="push_crisis_saved_body">Intensity %1$d/5 at %2$s</string>
     <string name="crisis_title">Attack</string>
     <string name="crisis_edit_title">Edit attack</string>
-    <string name="crisis_change_time">Change time</string>
     <string name="crisis_media">Videos and photos</string>
     <string name="crisis_film">Record</string>
     <string name="crisis_duration_field">Duration (seconds)</string>
@@ -686,8 +685,8 @@
         <item quantity="other">%1$s (%2$s, as needed): %3$d doses</item>
     </plurals>
     <plurals name="pdf_med_fixed">
-        <item quantity="one">%1$s (%2$s, %3$s): %4$d / %5$d dose</item>
-        <item quantity="other">%1$s (%2$s, %3$s): %4$d / %5$d doses</item>
+        <item quantity="one">%1$s (%2$s · %3$s): %4$d / %5$d dose</item>
+        <item quantity="other">%1$s (%2$s · %3$s): %4$d / %5$d doses</item>
     </plurals>
     <string name="pdf_adherence">adherence %1$d%%</string>
     <plurals name="pdf_skipped">
@@ -730,4 +729,84 @@
     <string name="tile_breath">Breaths</string>
     <string name="crisis_widget_label">Attack now</string>
     <string name="crisis_widget_description">One tap to film an attack and timestamp it</string>
+
+    <!-- Fréquences -->
+    <string name="freq_title">Frequency</string>
+    <string name="freq_type_daily">Every day</string>
+    <string name="freq_type_every_n_days">Every X days</string>
+    <string name="freq_type_weekdays">Certain days</string>
+    <string name="freq_type_every_n_weeks">Every X weeks</string>
+    <string name="freq_type_every_n_months">Every X months</string>
+    <string name="freq_interval_days">X (number of days)</string>
+    <string name="freq_interval_weeks">X (number of weeks)</string>
+    <string name="freq_interval_months">X (number of months)</string>
+    <string name="freq_weeks_days_hint">Days of the week (otherwise, the same day as the start date)</string>
+    <string name="freq_month_hint">Day %1$d of the month, from the start date (moved to the last day of shorter months).</string>
+    <string name="freq_daily">Every day</string>
+    <string name="freq_weekly">Every week</string>
+    <string name="freq_monthly">Every month</string>
+    <plurals name="freq_every_n_days">
+        <item quantity="one">Every %d days</item>
+        <item quantity="other">Every %d days</item>
+    </plurals>
+    <plurals name="freq_every_n_weeks">
+        <item quantity="one">Every %d weeks</item>
+        <item quantity="other">Every %d weeks</item>
+    </plurals>
+    <plurals name="freq_every_n_months">
+        <item quantity="one">Every %d months</item>
+        <item quantity="other">Every %d months</item>
+    </plurals>
+    <string name="freq_with_detail">%1$s, %2$s</string>
+    <string name="freq_on_weekday">on %1$s</string>
+    <string name="freq_on_month_day">on day %1$d</string>
+    <string name="freq_at">%1$s at %2$s</string>
+    <string name="freq_at_after_detail">%1$s, at %2$s</string>
+    <string name="day_short_mon">Mon</string>
+    <string name="day_short_tue">Tue</string>
+    <string name="day_short_wed">Wed</string>
+    <string name="day_short_thu">Thu</string>
+    <string name="day_short_fri">Fri</string>
+    <string name="day_short_sat">Sat</string>
+    <string name="day_short_sun">Sun</string>
+    <string name="day_full_mon">Monday</string>
+    <string name="day_full_tue">Tuesday</string>
+    <string name="day_full_wed">Wednesday</string>
+    <string name="day_full_thu">Thursday</string>
+    <string name="day_full_fri">Friday</string>
+    <string name="day_full_sat">Saturday</string>
+    <string name="day_full_sun">Sunday</string>
+    <string name="care_repeat">Renew</string>
+    <string name="care_repeat_none">No</string>
+    <plurals name="care_repeat_months">
+        <item quantity="one">%d month</item>
+        <item quantity="other">%d months</item>
+    </plurals>
+    <string name="care_repeat_hint">The next reminder is calculated from the date of care.</string>
+    <string name="care_done_today">Done today</string>
+    <string name="care_done_today_a11y">Mark %1$s as done today</string>
+    <!-- Historique modifiable -->
+    <string name="field_time">Time</string>
+    <string name="action_pick_time">Pick a time</string>
+    <string name="history_future_error">This date is in the future</string>
+    <string name="crisis_start_field">Start</string>
+    <string name="dose_add_past">Add a past dose</string>
+    <string name="dose_edit_title">Edit dose</string>
+    <string name="dose_stock_deduct">Deduct from stock</string>
+    <string name="dose_stock_restore">Put back in stock</string>
+    <string name="dose_noted_by">Logged by %1$s</string>
+    <string name="breath_add_past">Add a past measurement</string>
+    <string name="breath_edit_title">Edit measurement</string>
+    <string name="breath_mode_rate">breaths/min</string>
+    <string name="breath_mode_taps">Count</string>
+    <string name="breath_rate_field">Rate (breaths/min)</string>
+    <string name="breath_taps_field">Breaths counted</string>
+    <string name="obs_add_past">Add a past observation</string>
+    <string name="obs_edit_title">Edit observation</string>
+    <string name="obs_category">Category</string>
+    <string name="obs_value">Value</string>
+    <string name="weight_edit_title">Edit weight</string>
+    <string name="doc_edit_title">Edit document</string>
+    <string name="doc_edit_named">Edit %1$s</string>
+    <string name="doc_replace_file">Replace file</string>
 </resources>

@@ -9,7 +9,8 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.karelisio.patoune.container
 import com.karelisio.patoune.domain.Dates
-import com.karelisio.patoune.domain.ReminderPlanner
+import com.karelisio.patoune.domain.CareRenewal
+import com.karelisio.patoune.domain.Schedule
 import com.karelisio.patoune.domain.Stock
 import java.util.concurrent.TimeUnit
 
@@ -19,14 +20,15 @@ class DailyWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         val c = applicationContext.container
         val today = Dates.today()
         for (med in c.db.medications().active()) {
-            val days = Stock.daysLeft(med.stockRemaining, med.unitsPerDose, ReminderPlanner.parseTimes(med.times).size)
+            val days = Stock.daysLeft(med.stockRemaining, med.unitsPerDose, Schedule.of(med, Dates.zone()))
             if (Stock.renewalDue(Dates.parse(med.renewalDate), today, days)) {
                 val ctx = applicationContext
                 Notif.simple(ctx, Notif.CH_STOCK, ("renew" + med.id).hashCode(), ctx.getString(R.string.notif_renew_title, med.name),
                     days?.let { ctx.resources.getQuantityString(R.plurals.notif_renew_days, it, it) } ?: ctx.getString(R.string.notif_renew_soon))
             }
         }
-        for (ci in c.db.care().withDue()) {
+        // Seule l'entrée la plus récente de chaque produit compte (« Fait aujourd'hui » garde l'ancienne dans l'historique).
+        for (ci in CareRenewal.latestPerProduct(c.db.care().allRows())) {
             val due = Dates.parse(ci.nextDue) ?: continue
             val days = java.time.temporal.ChronoUnit.DAYS.between(today, due)
             if (days in 0..7 && (days == 7L || days <= 1L)) {

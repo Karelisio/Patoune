@@ -56,6 +56,12 @@ enum class MedType(@StringRes val labelRes: Int, @PluralsRes val unitRes: Int, @
     OTHER(R.string.med_type_other, R.plurals.unit_other, R.string.units_other),
 }
 
+/**
+ * Fréquence d'un traitement (nom stocké et synchronisé : ne jamais renommer). Les horaires [Medication.times]
+ * s'appliquent à chaque jour actif ; le calcul des jours actifs est fait par `domain/Schedule`.
+ */
+enum class FreqType { DAILY, EVERY_N_DAYS, WEEKDAYS, EVERY_N_WEEKS, EVERY_N_MONTHS }
+
 
 @Serializable
 @Entity(tableName = "medications", indices = [Index("animalId")])
@@ -80,6 +86,12 @@ data class Medication(
     @ColumnInfo(defaultValue = "0") val alarmStyle: Boolean = false,
     /** Relance « En retard » si la prise n'est pas marquée après ce délai (0 = jamais). */
     @ColumnInfo(defaultValue = "30") val lateMinutes: Int = 30,
+    /** Fréquence : tous les jours, tous les N jours, certains jours, toutes les N semaines, tous les N mois. */
+    @ColumnInfo(defaultValue = "DAILY") val freqType: FreqType = FreqType.DAILY,
+    /** N pour EVERY_N_DAYS / EVERY_N_WEEKS / EVERY_N_MONTHS (1 sinon). */
+    @ColumnInfo(defaultValue = "1") val freqInterval: Int = 1,
+    /** Jours de la semaine ISO (1 = lundi … 7 = dimanche) séparés par des virgules, pour WEEKDAYS / EVERY_N_WEEKS. */
+    @ColumnInfo(defaultValue = "") val weekdays: String = "",
     override val createdBy: String = "",
     override val updatedAt: Long = 0,
     override val deleted: Boolean = false,
@@ -272,6 +284,8 @@ data class CareItem(
     val date: String = "",
     val nextDue: String? = null,
     val notes: String = "",
+    /** Renouvellement automatique (mois) : l'échéance est calculée depuis [date]. Null = pas de renouvellement. */
+    val repeatMonths: Int? = null,
     override val createdBy: String = "",
     override val updatedAt: Long = 0,
     override val deleted: Boolean = false,

@@ -9,6 +9,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.text.input.KeyboardType
+import com.karelisio.patoune.data.BreathContext
+import com.karelisio.patoune.data.BreathInput
+import com.karelisio.patoune.data.EntryOps
+import com.karelisio.patoune.domain.Backdate
+import com.karelisio.patoune.reminders.BreathAlerts
+import com.karelisio.patoune.ui.components.ChoiceChips
+import com.karelisio.patoune.ui.components.DateTimeField
+import com.karelisio.patoune.ui.components.Field
+import com.karelisio.patoune.ui.components.NumberField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -157,6 +176,8 @@ fun BreathScreen(vm: MainViewModel) {
     val air by remember { c.db.air().observeAll() }.collectAsState(emptyList())
     var range by remember { mutableStateOf(Range.WEEK) }
     var showPollen by remember { mutableStateOf(true) }
+    /** Mesure à corriger, ou nouvelle mesure (id vide) ajoutée après coup. */
+    var editing by remember { mutableStateOf<BreathCount?>(null) }
 
     Scaffold(topBar = { AnimalTopBar(vm) }) { pad ->
         val a = animal
@@ -201,9 +222,14 @@ fun BreathScreen(vm: MainViewModel) {
                 }
             }
             item { Text(stringResource(R.string.breath_measures), style = MaterialTheme.typography.titleMedium) }
+            item {
+                OutlinedButton(onClick = { editing = BreathCount(animalId = a.id, at = System.currentTimeMillis(), context = BreathContext.REST) }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.breath_add_past))
+                }
+            }
             items(counts.reversed(), key = { it.id }) { b ->
                 ListItem(
-                    modifier = Modifier.cascade(0).clickable { },
+                    modifier = Modifier.cascade(0).clickable(onClickLabel = stringResource(R.string.breath_edit_title)) { editing = b },
                     headlineContent = { Text(stringResource(if (b.estimated) R.string.bpm_value_estimated else R.string.bpm_value, Breath.format(b.bpm))) },
                     supportingContent = {
                         Text(listOfNotNull(Dates.fmtDayTime(b.at), stringResource(b.context.labelRes), b.note.takeIf { it.isNotBlank() },
@@ -218,6 +244,80 @@ fun BreathScreen(vm: MainViewModel) {
 
                 )
             }
+        }
+    }
+    val a = animal
+    editing?.let { b -> if (a != null) BreathSheet(a, b) { editing = null } }
+}
+
+private enum class BreathMode { RATE, TAPS }
+
+/**
+ * Ajout ([base] sans id) ou correction d'une mesure : fréquence saisie directement, ou respirations comptées sur 15/30/60 s
+ * (fréquence recalculée). L'alerte de seuil ne part que pour une mesure de moins d'1 h, nouvelle ou dont la valeur change.
+ */
+@Composable
+private fun BreathSheet(animal: Animal, base: BreathCount, onDismiss: () -> Unit) {
+    val c = LocalContext.current.container
+    val scope = rememberCoroutineScope()
+    val isNew = base.id.isEmpty()
+    var at by remember { mutableLongStateOf(base.at) }
+    val countedAsTaps = !isNew && base.taps > 0 && base.durationSec in Breath.durations && Breath.perMinute(base.taps, base.durationSec) == base.bpm
+    var mode by remember { mutableStateOf(if (countedAsTaps) BreathMode.TAPS else BreathMode.RATE) }
+    var rate by remember { mutableStateOf(if (isNew) null else base.bpm) }
+    var taps by remember { mutableStateOf(if (countedAsTaps) base.taps.toString() else "") }
+    var duration by remember { mutableIntStateOf(if (base.durationSec in Breath.durations) base.durationSec else 30) }
+    var context by remember { mutableStateOf(base.context) }
+    var note by remember { mutableStateOf(base.note) }
+    val input = when (mode) {
+        BreathMode.RATE -> rate?.let { BreathInput.Rate(it) }
+        BreathMode.TAPS -> taps.toIntOrNull()?.let { BreathInput.Taps(it, duration) }
+    }
+    val draft = input?.let { EntryOps.breath(base, at, it, context, note) }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(if (isNew) R.string.breath_add_past else R.string.breath_edit_title), style = MaterialTheme.typography.titleLarge)
+            DateTimeField(at, { at = it }, stringResource(R.string.field_date))
+            val modes = BreathMode.entries
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                modes.forEachIndexed { i, m ->
+                    SegmentedButton(mode == m, { mode = m }, SegmentedButtonDefaults.itemShape(i, modes.size)) {
+                        Text(stringResource(if (m == BreathMode.RATE) R.string.breath_mode_rate else R.string.breath_mode_taps))
+                    }
+                }
+            }
+            when (mode) {
+                BreathMode.RATE -> NumberField(rate, { rate = it }, stringResource(R.string.breath_rate_field))
+                BreathMode.TAPS -> {
+                    Field(taps, { t -> taps = t.filter(Char::isDigit) }, stringResource(R.string.breath_taps_field), keyboard = KeyboardType.Number)
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        Breath.durations.forEachIndexed { i, d ->
+                            SegmentedButton(duration == d, { duration = d }, SegmentedButtonDefaults.itemShape(i, Breath.durations.size)) { Text(stringResource(R.string.duration_sec, d)) }
+                        }
+                    }
+                    draft?.let { Text(stringResource(R.string.bpm_value, Breath.format(it.bpm)), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
+                }
+            }
+            ChoiceChips(BreathContext.entries, context, { stringResource(it.labelRes) }) { context = it }
+            Field(note, { note = it }, stringResource(R.string.obs_note))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        val i = input ?: return@Button
+                        scope.launch {
+                            val saved = EntryOps.saveBreath(c.store, base, at, i, context, note) ?: return@launch
+                            if (Backdate.isRecent(saved.at, System.currentTimeMillis()) && (isNew || saved.bpm != base.bpm)) BreathAlerts.check(c, animal, saved)
+                            c.hooks.onDataChanged()
+                            onDismiss()
+                        }
+                    },
+                    enabled = draft != null && !Backdate.isFuture(at, System.currentTimeMillis()),
+                ) { Text(stringResource(R.string.action_save)) }
+            }
+            Spacer(Modifier.padding(8.dp))
         }
     }
 }

@@ -3,8 +3,19 @@ package com.karelisio.patoune.ui.components
 import com.karelisio.patoune.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SelectableDates
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.karelisio.patoune.domain.Backdate
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -86,6 +97,61 @@ fun DateField(value: String?, onChange: (String?) -> Unit, label: String, modifi
             dismissButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.action_cancel)) } },
         ) { DatePicker(state) }
     }
+}
+
+/**
+ * Date + heure d'une entrée (fuseau local du téléphone), choisies séparément avec les sélecteurs Material 3.
+ * Sans [allowFuture], les jours futurs ne sont pas proposés et une heure future est signalée en erreur
+ * (l'écran appelant bloque l'enregistrement avec [Backdate.isFuture]).
+ */
+@Composable
+fun DateTimeField(valueMs: Long, onChange: (Long) -> Unit, label: String, modifier: Modifier = Modifier, allowFuture: Boolean = false) {
+    var pickDate by remember { mutableStateOf(false) }
+    var pickTime by remember { mutableStateOf(false) }
+    val zone = Dates.zone()
+    val z = Instant.ofEpochMilli(valueMs).atZone(zone)
+    val future = !allowFuture && Backdate.isFuture(valueMs, System.currentTimeMillis())
+    Column(modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PickerField(z.toLocalDate().format(Dates.day), label, Icons.Rounded.CalendarMonth, stringResource(R.string.action_pick_date), future, Modifier.weight(1.4f)) { pickDate = true }
+            PickerField(z.toLocalTime().format(Dates.time), stringResource(R.string.field_time), Icons.Rounded.Schedule, stringResource(R.string.action_pick_time), future, Modifier.weight(1f)) { pickTime = true }
+        }
+        if (future) Text(stringResource(R.string.history_future_error), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+    }
+    if (pickDate) {
+        val todayUtc = Dates.today().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = z.toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) = allowFuture || utcTimeMillis <= todayUtc
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { pickDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { onChange(Backdate.withDate(valueMs, Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate(), zone)) }
+                    pickDate = false
+                }) { Text(stringResource(R.string.action_ok)) }
+            },
+            dismissButton = { TextButton(onClick = { pickDate = false }) { Text(stringResource(R.string.action_cancel)) } },
+        ) { DatePicker(state) }
+    }
+    if (pickTime) TimeDialog(z.toLocalTime(), { pickTime = false }) { t -> onChange(Backdate.withTime(valueMs, t, zone)); pickTime = false }
+}
+
+/** Champ en lecture seule qui ouvre un sélecteur (tap sur le champ ou sur l'icône). */
+@Composable
+private fun PickerField(text: String, label: String, icon: ImageVector, iconDescription: String, isError: Boolean, modifier: Modifier, onOpen: () -> Unit) {
+    val source = remember { MutableInteractionSource() }
+    val open by androidx.compose.runtime.rememberUpdatedState(onOpen)
+    LaunchedEffect(source) { source.interactions.collect { if (it is PressInteraction.Release) open() } }
+    OutlinedTextField(
+        value = text, onValueChange = {}, readOnly = true, singleLine = true, isError = isError, label = { Text(label) },
+        trailingIcon = { IconButton(onClick = onOpen) { Icon(icon, iconDescription) } },
+        interactionSource = source, modifier = modifier,
+    )
 }
 
 @Composable
